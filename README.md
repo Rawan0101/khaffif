@@ -6,7 +6,7 @@
 
 A live campus map that shows real-time occupancy of parking lots, the library, study spaces and classrooms — counted automatically from students' phones via GPS, with no new hardware and no personal data.
 
-[**Live demo →**](https://YOUR-USERNAME.github.io/khaffif/) · Built for the **FARQ Hackathon 2026**
+[**Live demo →**](https://YOUR-USERNAME.github.io/khaffif/) · 🏆 **Top 25 finalist, FARQ Hackathon 2026**
 
 </div>
 
