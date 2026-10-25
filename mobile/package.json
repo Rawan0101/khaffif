@@ -1,0 +1,15 @@
+{
+  "name": "khaffif",
+  "version": "1.0.0",
+  "main": "index.js",
+  "private": true,
+  "scripts": {
+    "setup": "npx expo install react react-native expo-status-bar expo-location expo-notifications react-native-maps react-native-safe-area-context @expo/vector-icons",
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios"
+  },
+  "dependencies": {
+    "expo": "latest"
+  }
+}

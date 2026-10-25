@@ -1,0 +1,15 @@
+course,days,start,end,students
+CS101,sun;tue;thu,08:00,08:50,45
+CS101-2,sun;tue;thu,10:00,10:50,40
+MATH201,sun;tue,09:00,10:15,60
+MATH201-2,mon;wed,11:00,12:15,55
+ENG102,mon;wed,08:00,09:15,35
+ENG102-2,sun;tue;thu,12:00,12:50,38
+PHYS110,sun;tue;thu,09:00,09:50,70
+PHYS110-L,mon,13:00,14:50,25
+IS220,mon;wed,10:00,11:15,42
+IS220-2,sun;tue,13:00,14:15,40
+STAT101,sun;tue;thu,11:00,11:50,65
+ARAB101,mon;wed,12:30,13:45,50
+ISLM101,sun;tue;thu,14:00,14:50,60
+MGT201,mon;wed,09:30,10:45,48

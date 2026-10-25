@@ -1,0 +1,1146 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>خفّف — نموذج أولي</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+:root{
+  --canvas:#DDE5E3; --paper:#FFFFFF; --ground:#EEF2F1; --ink:#13233A; --muted:#5B6B7E; --line:#D3DBDA;
+  --brand:#0E6E73; --brand-soft:#DCEFEF;
+  --low:#2BA67A; --mid:#E3A23B; --high:#D8463B;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:"Readex Pro",system-ui,sans-serif;background:var(--canvas);color:var(--ink);display:flex;align-items:center;justify-content:center;font-size:15px;line-height:1.5}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+button:focus-visible,.zone:focus-visible{outline:3px solid var(--brand);outline-offset:2px}
+.phone{position:relative;width:100%;max-width:410px;height:100vh;max-height:860px;background:var(--ground);display:flex;flex-direction:column;overflow:hidden}
+@media(min-width:500px){.phone{border-radius:34px;border:9px solid var(--ink);box-shadow:0 30px 60px -25px rgba(19,35,58,.45)}}
+
+/* header */
+.top{display:flex;justify-content:space-between;align-items:center;padding:14px 18px 10px;background:var(--paper);border-bottom:1px solid var(--line)}
+.logo{font-weight:700;font-size:26px;color:var(--brand);letter-spacing:-.5px}
+.live{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);margin-inline-start:10px}
+.live i{width:8px;height:8px;border-radius:50%;background:var(--low);animation:pulse 1.6s infinite}
+@keyframes pulse{50%{opacity:.25}}
+.clockbox{display:flex;align-items:center;gap:8px}
+.clock{text-align:left;line-height:1.2}
+.clock b{font-size:17px;font-weight:600;display:block}
+.clock small{font-size:11px;color:var(--muted)}
+.ff{border:1px solid var(--line);border-radius:10px;padding:6px 9px;font-size:12px;color:var(--brand);font-weight:500}
+.sim{font-size:10.5px;color:var(--muted);text-align:center;padding:4px;background:#F6F8F7;border-bottom:1px solid var(--line)}
+
+main{flex:1;overflow-y:auto;position:relative}
+.tab{display:none;padding:14px 16px 24px}
+.tab.active{display:block}
+h2{font-size:19px;font-weight:600;margin-bottom:2px}
+.sub{color:var(--muted);font-size:13px;margin-bottom:12px}
+
+.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-bottom:12px;scrollbar-width:none}
+.chip{white-space:nowrap;padding:6px 13px;border-radius:999px;background:var(--paper);border:1px solid var(--line);font-size:13px}
+.chip[aria-pressed="true"]{background:var(--ink);color:#fff;border-color:var(--ink)}
+
+.tip{display:flex;gap:10px;align-items:center;background:var(--paper);border-radius:14px;padding:11px 13px;margin-bottom:12px;border-inline-start:4px solid var(--brand)}
+.tip p{font-size:13.5px;flex:1}
+.tip button{font-size:12.5px;color:var(--brand);font-weight:600;white-space:nowrap}
+
+/* map */
+.map{background:var(--paper);border-radius:18px;padding:8px}
+.map > svg{width:100%;height:auto;display:block}
+.map.real{padding:0;overflow:hidden;position:relative;z-index:0;isolation:isolate}
+#lmap{height:450px;border-radius:18px;background:#cfd8d6;font-family:inherit}
+.leaflet-container{font-family:inherit}
+.leaflet-control-attribution{font-size:9px}
+.lme{width:34px;height:34px;border-radius:50%;background:rgba(47,111,235,.22);display:grid;place-items:center;cursor:grab}
+.lme i{width:16px;height:16px;border-radius:50%;background:#2F6FEB;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35)}
+.ltag{display:inline-flex;align-items:center;gap:5px;background:#fff;border:2px solid var(--c);border-radius:99px;padding:3px 9px;font-size:11.5px;font-weight:600;color:var(--ink);white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,.25);transform:translate(-50%,-50%);cursor:pointer}
+.ltag b{color:var(--c)}
+.cpin{display:inline-block;background:var(--ink);color:#fff;font-weight:700;font-size:13px;padding:6px 12px;border-radius:12px;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,.35);transform:translate(-50%,-150%)}
+.cpin::after{content:"";position:absolute;left:50%;bottom:-6px;margin-left:-6px;border:6px solid transparent;border-top-color:var(--ink);border-bottom:0}
+.leaflet-container{direction:ltr}
+.ltag,.cpin{position:absolute;left:0;top:0;direction:rtl}
+.erow .pick{width:auto;padding:0 8px;font-size:12px;background:var(--soft);color:var(--brand)}
+.erow .pick.on{background:var(--brand);color:#fff}
+.leaflet-container.placing{cursor:crosshair}
+.ltag.dim{opacity:.3}
+.lhandle{width:26px;height:26px;border-radius:50%;background:var(--ink);color:#fff;display:grid;place-items:center;font-size:14px;border:2px solid #fff;cursor:move;box-shadow:0 2px 6px rgba(0,0,0,.4)}
+.maptools{position:absolute;top:10px;left:10px;z-index:500;display:flex;flex-direction:column;gap:6px}
+.maptools button{background:#fff;border-radius:10px;padding:7px 10px;font-size:12px;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.maptools button[aria-pressed="true"]{background:var(--ink);color:#fff}
+.campus{position:absolute;bottom:24px;right:10px;z-index:500;background:rgba(255,255,255,.95);border-radius:10px;padding:5px 10px;font-size:12px;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.edit{background:var(--paper);border-radius:16px;padding:12px 14px;margin-top:10px}
+.edit h4{font-size:14px;margin-bottom:2px}
+.edit p{font-size:12.5px;color:var(--muted);margin-bottom:8px}
+.erow{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--ground);font-size:13.5px}
+.erow div{display:flex;align-items:center;gap:6px}
+.erow button{width:28px;height:28px;border-radius:8px;background:var(--ground);font-weight:700}
+.erow span{min-width:44px;text-align:center;font-size:12.5px;color:var(--muted)}
+.ebtns{display:flex;gap:8px;margin-top:10px}
+.ebtns button{flex:1;padding:9px;border-radius:10px;background:var(--brand-soft);color:var(--brand);font-weight:600;font-size:13px}
+.road{stroke:#E4EAE9;stroke-width:14;fill:none}
+.road-c{stroke:#fff;stroke-width:1.5;stroke-dasharray:6 6;fill:none}
+.zone{cursor:pointer}
+.z-bg{fill:#F4F7F6;stroke-width:2}
+.z-fill{transform-box:fill-box;transform-origin:bottom;transition:transform .9s ease,fill .6s}
+.z-name{font-size:12px;font-weight:500;text-anchor:middle;fill:var(--ink);pointer-events:none}
+.z-val{font-size:15px;font-weight:700;text-anchor:middle;pointer-events:none}
+.zone.dim{opacity:.22}
+.you{fill:var(--brand)}
+.you-ring{fill:var(--brand);opacity:.25;animation:ring 2s infinite;transform-box:fill-box;transform-origin:center}
+@keyframes ring{0%{transform:scale(.6);opacity:.45}100%{transform:scale(2.2);opacity:0}}
+.legend{display:flex;gap:14px;justify-content:center;font-size:12px;color:var(--muted);margin-top:8px}
+.legend span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:3px;margin-inline-end:5px;vertical-align:-1px;background:var(--c)}
+
+/* sheet */
+.scrim{position:absolute;inset:0;background:rgba(19,35,58,.35);opacity:0;pointer-events:none;transition:opacity .25s;z-index:5}
+.sheet{position:absolute;inset-inline:0;bottom:0;background:var(--paper);border-radius:22px 22px 0 0;padding:10px 18px 22px;transform:translateY(105%);transition:transform .3s ease;z-index:6;max-height:82%;overflow-y:auto}
+.open .scrim{opacity:1;pointer-events:auto}
+.open .sheet{transform:none}
+.grab{width:40px;height:4px;border-radius:4px;background:var(--line);margin:0 auto 12px}
+.s-head{display:flex;justify-content:space-between;align-items:flex-start}
+.s-head h3{font-size:20px;font-weight:600}
+.pill{display:inline-block;font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;color:#fff;background:var(--c)}
+.big{font-size:40px;font-weight:700;line-height:1.1;margin:12px 0 0}
+.big small{font-size:15px;font-weight:400;color:var(--muted);margin-inline-start:4px}
+.trend{font-size:13px;color:var(--muted);margin-bottom:12px}
+.src{font-size:12px;color:var(--muted);background:var(--ground);border-radius:10px;padding:7px 10px;margin-bottom:14px}
+.src b{color:var(--ink);font-weight:500}
+.next{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:16px}
+.next div{background:var(--ground);border-radius:10px;padding:7px 4px;text-align:center;font-size:11.5px;color:var(--muted)}
+.next b{display:block;font-size:15px;color:var(--c)}
+.btn{display:block;width:100%;padding:12px;border-radius:13px;background:var(--brand);color:#fff;font-weight:600;font-size:15px}
+.btn.ghost{background:var(--brand-soft);color:var(--brand)}
+.report{margin-top:14px;font-size:13px;color:var(--muted)}
+.report div{display:flex;gap:6px;margin-top:6px}
+.report button{flex:1;border:1px solid var(--line);border-radius:10px;padding:7px;font-size:13px}
+
+/* predictions */
+.card{background:var(--paper);border-radius:16px;padding:14px;margin-bottom:12px}
+.card h4{font-size:14px;font-weight:600;margin-bottom:8px}
+.bars{display:flex;align-items:flex-end;gap:4px;height:150px;padding-top:6px;position:relative}
+.bar{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%}
+.bar i{display:block;width:100%;border-radius:5px 5px 2px 2px;background:var(--c);opacity:.35}
+.bar.now i{opacity:1}
+.bar span{font-size:10.5px;color:var(--muted);margin-top:4px}
+.bar.now span{color:var(--ink);font-weight:600}
+.best{display:flex;gap:10px}
+.best div{flex:1;background:var(--ground);border-radius:12px;padding:10px}
+.best small{font-size:12px;color:var(--muted);display:block}
+.best b{font-size:17px}
+.row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--ground);font-size:14px}
+.row:last-child{border:0}
+
+/* alerts */
+.empty{text-align:center;color:var(--muted);padding:40px 20px;font-size:14px}
+.al{display:flex;justify-content:space-between;align-items:center}
+.al small{display:block;font-size:12px;color:var(--muted)}
+.al .st{font-size:12px;font-weight:600;padding:3px 9px;border-radius:999px}
+.st.wait{background:#FFF3DF;color:#9A6512}
+.st.done{background:#DDF3EA;color:#1C7A57}
+
+/* admin */
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.kpis div{background:var(--paper);border-radius:14px;padding:10px}
+.kpis b{font-size:20px;display:block}
+.kpis small{font-size:11.5px;color:var(--muted)}
+.heat{display:grid;grid-template-columns:52px repeat(12,1fr);gap:2px;font-size:10px;color:var(--muted)}
+.heat .c{aspect-ratio:1;border-radius:3px}
+.heat .l{display:flex;align-items:center;font-size:11px}
+.heat .h{text-align:center}
+.rec{border-inline-start:4px solid var(--brand);font-size:14px}
+.note{font-size:11.5px;color:var(--muted);text-align:center;margin-top:6px}
+
+/* nav */
+nav{display:grid;grid-template-columns:repeat(4,1fr);background:var(--paper);border-top:1px solid var(--line);padding:6px 4px 10px}
+nav button{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11.5px;color:var(--muted);padding:4px 0;position:relative}
+nav svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+nav button[hidden]{display:none}
+nav button[aria-selected="true"]{color:var(--brand);font-weight:600}
+.badge{position:absolute;top:0;inset-inline-end:calc(50% - 20px);background:var(--high);color:#fff;font-size:10px;border-radius:999px;min-width:16px;height:16px;line-height:16px;text-align:center;display:none}
+
+.toast{position:absolute;top:74px;inset-inline:14px;background:var(--ink);color:#fff;border-radius:14px;padding:12px 14px;font-size:14px;z-index:9;transform:translateY(-140%);transition:transform .35s ease;display:flex;gap:10px;align-items:center}
+.toast.show{transform:none}
+.toast i{width:10px;height:10px;border-radius:50%;background:var(--low);flex:none}
+
+/* GPS */
+.you-g{cursor:grab;touch-action:none}
+.you-g:active{cursor:grabbing}
+.you-hit{fill:transparent}
+.zone.inside .z-line{stroke-width:4}
+.gps{display:flex;align-items:center;gap:10px;background:var(--paper);border-radius:14px;padding:10px 13px;margin-bottom:12px;font-size:13px}
+.gps .dot{width:10px;height:10px;border-radius:50%;background:#2F6FEB;flex:none;box-shadow:0 0 0 4px rgba(47,111,235,.18)}
+.gps b{font-weight:600}
+.gps small{display:block;color:var(--muted);font-size:12px}
+.acct{width:34px;height:34px;border-radius:11px;background:var(--brand-soft);display:grid;place-items:center}
+.acct svg{width:19px;height:19px;stroke:var(--brand);fill:none;stroke-width:2;stroke-linecap:round}
+.notif{position:absolute;top:10px;inset-inline:10px;background:rgba(255,255,255,.98);border-radius:18px;box-shadow:0 14px 34px -12px rgba(19,35,58,.45);padding:12px 14px;z-index:12;transform:translateY(-160%);transition:transform .35s ease}
+.notif.show{transform:none}
+.nh{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
+.nh b{width:22px;height:22px;border-radius:6px;background:var(--brand);color:#fff;font-size:11px;display:grid;place-items:center}
+.nt{font-weight:600;margin-top:6px}
+.nb{font-size:13px;color:var(--muted)}
+.acts{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px}
+.acts button{padding:9px;border-radius:10px;background:var(--ground);font-weight:600;font-size:14px;display:flex;align-items:center;justify-content:center;gap:6px}
+.acts button i{width:9px;height:9px;border-radius:50%;background:var(--c)}
+.acts button:hover{background:var(--brand-soft)}
+.here-note{background:var(--brand-soft);color:var(--brand);font-weight:600;font-size:13px;border-radius:10px;padding:7px 10px;margin-bottom:12px}
+.onb{position:absolute;inset:0;background:var(--ground);z-index:30;padding:40px 22px 24px;overflow-y:auto;transition:opacity .3s}
+.onb.hide{opacity:0;pointer-events:none}
+.onb .logo{font-size:44px;display:block}
+.onb .lead{color:var(--muted);font-size:15.5px;margin:6px 0 24px}
+.onb h3{font-size:14px;margin-bottom:10px}
+.uni{display:flex;align-items:center;gap:10px;width:100%;background:var(--paper);border:2px solid transparent;border-radius:14px;padding:14px;margin-bottom:10px;font-weight:500;text-align:start}
+.uni[aria-pressed="true"]{border-color:var(--brand)}
+.uni span{width:18px;height:18px;border-radius:50%;border:2px solid var(--brand);flex:none;display:grid;place-items:center}
+.uni[aria-pressed="true"] span::after{content:"";width:9px;height:9px;border-radius:50%;background:var(--brand)}
+.onb .btn{margin-top:16px}
+.onb .btn:disabled{opacity:.4;cursor:default}
+.onb small{display:block;text-align:center;color:var(--muted);font-size:12px;margin-top:10px}
+.pt{display:flex;gap:12px;background:var(--paper);border-radius:14px;padding:13px;margin-bottom:10px}
+.pt i{width:34px;height:34px;border-radius:10px;background:var(--brand-soft);flex:none;display:grid;place-items:center;font-style:normal;font-size:16px}
+.pt b{display:block;font-size:14.5px}
+.pt p{font-size:13px;color:var(--muted)}
+.set{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--ground)}
+.set:last-of-type{border:0}
+.set b{display:block;font-size:14.5px;font-weight:600}
+.set small{font-size:12.5px;color:var(--muted)}
+.sw{width:46px;height:28px;border-radius:99px;background:var(--line);position:relative;flex:none;transition:background .2s}
+.sw::after{content:"";position:absolute;top:3px;inset-inline-start:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:inset-inline-start .2s}
+.sw[aria-checked="true"]{background:var(--brand)}
+.sw[aria-checked="true"]::after{inset-inline-start:21px}
+.priv{list-style:none;margin-top:10px}
+.priv li{font-size:13.5px;padding:5px 0;display:flex;gap:8px}
+.priv li::before{content:"✓";color:var(--low);font-weight:700}
+.part{display:flex;justify-content:space-between;align-items:center;background:var(--ink);color:#fff;border-radius:16px;padding:14px;margin-bottom:12px}
+.part b{font-size:22px;display:block}
+.part small{font-size:12px;color:#B9C6D6}
+/* roles / study / rooms */
+.roles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:6px}
+.role{background:var(--paper);border:2px solid transparent;border-radius:14px;padding:12px 6px;font-size:22px;display:flex;flex-direction:column;align-items:center;gap:4px}
+.role b{font-size:12.5px;font-weight:600}
+.role[aria-pressed="true"]{border-color:var(--brand)}
+.lh{font-size:14.5px;font-weight:600;margin:6px 0 8px}
+.room{background:var(--paper);border-radius:14px;padding:12px;margin-bottom:10px}
+.rt{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.rt b{display:block;font-size:15px}
+.rt small{font-size:12.5px;color:var(--muted)}
+.free{font-size:12px;font-weight:600;background:#DDF3EA;color:#1C7A57;border-radius:99px;padding:3px 10px;white-space:nowrap}
+.feats{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.feats span{font-size:11.5px;background:var(--ground);border-radius:7px;padding:2px 8px;color:var(--muted)}
+.btn.sm{padding:9px;font-size:13.5px;margin-top:10px}
+.card.mine{border-inline-start:4px solid var(--brand)}
+.card.mine b{display:block}.card.mine small{color:var(--muted);font-size:12.5px}
+.req{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--ground)}
+.req b{display:block;font-size:14px}.req small{font-size:12px;color:var(--muted)}
+.ra{display:flex;gap:6px}.ra button{font-size:12.5px;font-weight:600;padding:6px 10px;border-radius:9px;background:#DDF3EA;color:#1C7A57}
+.ra button+button{background:#FBE3E1;color:var(--high)}
+.ub{display:grid;grid-template-columns:110px 1fr 38px;align-items:center;gap:8px;font-size:13px;padding:5px 0}
+.ubar{height:8px;background:var(--ground);border-radius:5px;overflow:hidden}.ubar i{display:block;height:100%}
+.ub b{text-align:left;font-size:12.5px}
+.sel{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);margin-bottom:12px}
+.sel select{flex:1;font:inherit;font-size:13.5px;padding:8px;border-radius:10px;border:1px solid var(--line);background:var(--paper)}
+.sugg-l{list-style:none}.sugg-l li{font-size:13.5px;line-height:1.65;padding:8px 0;border-bottom:1px solid var(--ground)}.sugg-l li:last-child{border:0}
+.photos{margin:4px 0 14px}
+.ph-h{display:flex;justify-content:space-between;align-items:center;font-size:13.5px}
+.ph-h button{font-size:12.5px;font-weight:600;color:var(--brand);background:var(--soft);border-radius:9px;padding:6px 10px}
+.ph-g{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}
+.ph-g figure{position:relative}.ph-g img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;display:block}
+.ph-g figcaption{position:absolute;bottom:4px;inset-inline-start:4px;font-size:10.5px;background:rgba(19,35,58,.7);color:#fff;border-radius:6px;padding:1px 6px}
+.ph-e{font-size:12.5px;color:var(--muted);margin-top:6px}
+/* concepts */
+.cc h4{font-size:15px;margin-bottom:2px}
+.cc .cm{font-size:12.5px;color:var(--high);font-weight:600;margin-bottom:10px}
+.ba{position:relative;border-radius:12px;overflow:hidden;aspect-ratio:16/10;background:#eee}
+.ba svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+.ba-b{position:absolute;inset:0;clip-path:inset(0 calc(100% - var(--p)) 0 0)}
+.ba-a{position:absolute;inset:0}
+.ba-line{position:absolute;top:0;bottom:0;left:var(--p);width:3px;margin-left:-1.5px;background:#fff;box-shadow:0 0 0 1px rgba(19,35,58,.3)}
+.ba-l,.ba-r{position:absolute;top:8px;font-size:11px;font-weight:700;background:rgba(19,35,58,.75);color:#fff;border-radius:6px;padding:2px 8px}
+.ba-l{left:8px}.ba-r{right:8px;background:var(--brand)}
+.ba-in{width:100%;margin:8px 0 4px;accent-color:var(--brand)}
+.chg{padding-inline-start:0;list-style:none;counter-reset:c;margin-top:6px}
+.chg li{counter-increment:c;display:flex;gap:8px;font-size:13.5px;line-height:1.55;padding:4px 0}
+.chg li::before{content:counter(c);flex:none;width:20px;height:20px;border-radius:50%;background:var(--high);color:#fff;font-size:11px;font-weight:700;display:grid;place-items:center;margin-top:1px}
+.imp{background:#DDF3EA;color:#1C7A57;font-weight:600;font-size:13px;border-radius:10px;padding:8px 10px;margin:8px 0}
+.cc-b{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.cc-b button{font-size:12.5px;font-weight:600;padding:8px 10px;border-radius:10px;background:var(--ground)}
+.cc-b button.pri{background:var(--brand);color:#fff;margin-inline-start:auto}
+.cc-b .st{margin-inline-start:auto}
+.pp{position:relative;margin-top:10px}.pp img{width:100%;border-radius:12px;display:block}
+.pp span{position:absolute;width:22px;height:22px;margin:-11px 0 0 -11px;border-radius:50%;background:var(--high);color:#fff;border:2px solid #fff;font-size:11px;font-weight:700;display:grid;place-items:center}
+.zone.hidek{display:none}
+/* stage + unmet */
+.stage{position:fixed;inset:0;z-index:100;background:#13233A;color:#fff;display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:4vw;padding:6vw;font-family:inherit}
+.stage[hidden]{display:none}
+.st-l h1{font-size:clamp(22px,3.4vw,44px);margin:12px 0 8px}
+.st-l p{color:#9FB0C3;font-size:clamp(14px,1.6vw,20px);margin-bottom:20px}
+.qr{background:#fff;padding:14px;border-radius:16px;display:inline-block;min-width:120px;color:#13233A;font-size:12px;word-break:break-all}
+.st-l small{display:block;color:#7F90A6;font-size:12px;margin-top:10px;word-break:break-all}
+.st-r{text-align:center}
+.st-r small{color:#9FD4D4;font-size:clamp(14px,1.8vw,22px)}
+.st-r b{display:block;font-size:clamp(90px,16vw,220px);line-height:1;font-variant-numeric:tabular-nums;color:#fff}
+.st-r span{color:#9FB0C3;font-size:clamp(13px,1.5vw,18px)}
+.st-x{position:absolute;top:16px;left:16px;color:#fff;font-size:22px;background:none}
+@media(max-width:700px){.stage{grid-template-columns:1fr;text-align:center}}
+.un-top{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:6px 0 12px}
+.un-top div{background:var(--ground);border-radius:12px;padding:8px}
+.un-top b{display:block;font-size:19px}.un-top small{font-size:11.5px;color:var(--muted)}
+.un-bars{display:flex;align-items:flex-end;gap:3px;height:90px}
+.un-bars div{flex:1;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center}
+.un-bars i{width:100%;background:var(--brand);opacity:.75;border-radius:3px 3px 0 0;display:block}
+.un-bars span{font-size:10px;color:var(--muted);margin-top:3px}
+.un-n{font-size:12.5px;color:var(--muted);margin-top:10px;line-height:1.6}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="phone" id="phone">
+  <header class="top">
+    <div><span class="logo">خفّف</span><span class="live"><i></i>مباشر</span></div>
+    <div class="clockbox">
+      <button class="acct" id="acct" aria-label="حسابي"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg></button>
+      <button class="ff" id="ff" aria-label="قدّم الوقت نص ساعة">+٣٠ د</button>
+      <div class="clock"><b id="clock"></b><small id="day"></small></div>
+    </div>
+  </header>
+  <div class="sim">نموذج أولي — خريطة جامعة اليمامة — الخبر. اسحب النقطة الزرقاء (أنت) لأي مكان</div>
+
+  <main>
+    <section class="tab active" id="tab-map">
+      <div class="chips" role="group" aria-label="نوع المكان">
+        <button class="chip" data-f="all" aria-pressed="true">الكل</button>
+        <button class="chip" data-f="parking" aria-pressed="false">المواقف</button>
+        <button class="chip" data-f="study" aria-pressed="false">المكتبة والقاعات</button>
+        <button class="chip" data-f="food" aria-pressed="false">الأكل</button>
+      </div>
+      <div class="gps" id="gps"></div>
+      <div class="tip" id="tip"></div>
+      <div class="map" id="map"></div>
+      <div class="legend">
+        <span style="--c:var(--low)">خفيف</span><span style="--c:var(--mid)">متوسط</span><span style="--c:var(--high)">زحمة</span>
+      </div>
+      <div class="edit" id="editPanel" hidden></div>
+    </section>
+
+    <section class="tab" id="tab-pred">
+      <h2>التوقعات</h2>
+      <p class="sub">مبنية على بيانات الأسابيع الماضية والجدول الدراسي</p>
+      <div class="chips" id="predChips"></div>
+      <div class="card"><h4 id="predTitle"></h4><div class="bars" id="bars"></div></div>
+      <div class="card"><div class="best" id="best"></div></div>
+      <div class="card"><h4>أهدأ خيار الحين</h4><div id="calm"></div></div>
+    </section>
+
+    <section class="tab" id="tab-study">
+      <h2>وين أذاكر؟</h2>
+      <p class="sub">أماكن فاضية الحين في المكتبة والقاعات</p>
+      <div class="chips" id="studyModes">
+        <button class="chip" data-m="solo" aria-pressed="true">مذاكرة فردية</button>
+        <button class="chip" data-m="group" aria-pressed="false">مذاكرة جماعية</button>
+        <button class="chip" data-m="present" aria-pressed="false">تحضير عرض</button>
+      </div>
+      <div id="studyList"></div>
+    </section>
+
+    <section class="tab" id="tab-rooms"><div id="roomsBody"></div></section>
+
+    <section class="tab" id="tab-alerts">
+      <h2>تنبيهاتي</h2>
+      <p class="sub">نرسل لك إشعار أول ما يخف المكان</p>
+      <div id="alerts"></div>
+    </section>
+
+    <section class="tab" id="tab-admin">
+      <h2>لوحة الجامعة</h2>
+      <p class="sub">بيانات مجمّعة ومجهولة الهوية لإدارة المرافق</p>
+      <div class="part"><div><b id="partN">4,812</b><small>طالب مشارك الحين عبر تطبيق الجامعة</small></div><div style="text-align:left"><b>68٪</b><small>من الموجودين</small></div></div>
+      <div class="chips" id="adminChips"></div>
+      <div class="kpis" id="kpis"></div>
+      <div class="card"><h4>متوسط الإشغال خلال الأسبوع</h4><div class="heat" id="heat"></div></div>
+      <div class="card rec" id="rec"></div>
+      <div id="underused"></div>
+      <p class="note">المصدر: مواقع أجهزة الطلاب داخل حدود الأماكن فقط، بدون هوية ولا مسار تحركات. متوافق مع نظام حماية البيانات الشخصية.</p>
+    </section>
+  </main>
+
+  <nav role="tablist">
+    <button role="tab" aria-selected="true" data-t="map"><svg viewBox="0 0 24 24"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14"/></svg>الخريطة</button>
+    <button role="tab" aria-selected="false" data-t="study"><svg viewBox="0 0 24 24"><path d="M4 5h7a2 2 0 0 1 2 2v12a2 2 0 0 0-2-2H4zM20 5h-7a2 2 0 0 0-2 2v12a2 2 0 0 1 2-2h7z"/></svg>مذاكرة</button>
+    <button role="tab" aria-selected="false" data-t="rooms" hidden><svg viewBox="0 0 24 24"><path d="M4 21V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v16M2 21h20M9 21v-4h6v4M8 7h2M14 7h2M8 11h2M14 11h2"/></svg>القاعات</button>
+    <button role="tab" aria-selected="false" data-t="pred"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>التوقعات</button>
+    <button role="tab" aria-selected="false" data-t="alerts"><svg viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 1 1 12 0v5l2 2H4l2-2zM10 21h4"/></svg>تنبيهاتي<span class="badge" id="badge"></span></button>
+    <button role="tab" aria-selected="false" data-t="admin" hidden><svg viewBox="0 0 24 24"><path d="M3 3h8v8H3zM13 3h8v5h-8zM13 10h8v11h-8zM3 13h8v8H3z"/></svg>الإدارة</button>
+  </nav>
+
+  <div class="scrim" id="scrim"></div>
+  <div class="sheet" id="sheet" role="dialog" aria-modal="true"></div>
+  <div class="toast" id="toast" role="status"><i></i><span></span></div>
+
+  <div class="notif" id="notif" role="alertdialog" aria-live="assertive">
+    <div class="nh"><b>خ</b>خفّف · الحين</div>
+    <div class="nt" id="nt"></div>
+    <div class="nb">كيف الزحمة؟ ضغطة وحدة وكمّل طريقك</div>
+    <div class="acts">
+      <button data-rl="low" style="--c:var(--low)"><i></i>خفيف</button>
+      <button data-rl="mid" style="--c:var(--mid)"><i></i>متوسط</button>
+      <button data-rl="high" style="--c:var(--high)"><i></i>زحمة</button>
+    </div>
+  </div>
+
+  <div class="stage" id="stage" hidden>
+    <button id="closeStage" class="st-x" aria-label="إغلاق">✕</button>
+    <div class="st-l"><span class="logo" style="color:#fff">خفّف</span><h1>افتحوا الرابط من جوالاتكم</h1><p>امسحوا الكود، واسمحوا بالموقع، وشوفوا العدد يتغير هنا.</p><div id="qr" class="qr"></div><small id="stU"></small></div>
+    <div class="st-r"><small>قاعة العرض — مباشر</small><b id="stN">0</b><span id="stL"></span></div>
+  </div>
+  <input type="file" id="photoIn" accept="image/*" capture="environment" hidden>
+  <div class="onb" id="onb">
+    <div id="onb1">
+      <span class="logo">خفّف</span>
+      <p class="lead">اعرف زحمة المواقف والمكتبة والكافتيريا قبل ما توصل.</p>
+      <h3>اختر فرع جامعتك</h3>
+      <button class="uni" data-uni="yu" aria-pressed="false"><span></span>جامعة اليمامة — الخبر</button>
+      <button class="uni" data-uni="yur" aria-pressed="false"><span></span>جامعة اليمامة — الرياض</button>
+      <h3 style="margin-top:16px">أدخل كـ</h3>
+      <div class="roles">
+        <button class="role" data-role="student" aria-pressed="true">🎓<b>طالب</b></button>
+        <button class="role" data-role="faculty" aria-pressed="false">👩‍🏫<b>عضو هيئة تدريس</b></button>
+        <button class="role" data-role="admin" aria-pressed="false">🏛️<b>إدارة</b></button>
+      </div>
+      <button class="btn" id="login" disabled>الدخول بحساب الجامعة</button>
+      <small>تسجيل دخول موحّد عن طريق جامعتك — ما نشوف كلمة المرور</small>
+    </div>
+    <div id="onb2" hidden>
+      <span class="logo">خفّف</span>
+      <p class="lead">كيف نعرف الزحمة؟ لما تدخل حدود مكان داخل الحرم ينحسب وجودك تلقائياً، بدون ما تسوي شي.</p>
+      <div class="pt"><i>🕶️</i><div><b>بدون هوية</b><p>ما نرسل اسمك ولا رقمك الجامعي، بس "دخل جهاز" و"طلع جهاز".</p></div></div>
+      <div class="pt"><i>🏫</i><div><b>داخل الحرم فقط</b><p>برا حدود الجامعة ما نستخدم موقعك أبداً.</p></div></div>
+      <div class="pt"><i>🔔</i><div><b>ضغطة وحدة</b><p>أحياناً نسألك "كيف الزحمة؟" وتجاوب من الإشعار.</p></div></div>
+      <button class="btn" id="consent">أوافق وأفعّل الموقع</button>
+      <small>تقدر توقف المشاركة متى ما تبي من حسابي</small>
+    </div>
+  </div>
+</div>
+
+<script>
+const Z=[
+ {id:'pA',name:'مواقف الطالبات',short:'مواقف الطالبات',note:'مخصصة للطالبات',kind:'parking',cap:320,unit:'موقف فاضي',src:'مواقع أجهزة الطلاب داخل حدود الموقف (GPS، بدون هوية)',r:[15,20,135,90],prof:[40,82,95,98,97,93,82,64,46,30,18,10]},
+ {id:'pB',name:'مواقف الطلاب',short:'مواقف الطلاب',kind:'parking',cap:180,unit:'موقف فاضي',src:'مواقع أجهزة الطلاب داخل حدود الموقف (GPS، بدون هوية)',r:[172,20,173,90],prof:[30,70,90,94,92,88,75,55,40,25,15,8]},
+ {id:'lib',name:'المكتبة المركزية',short:'المكتبة',kind:'study',cap:250,unit:'مقعد فاضي',src:'مواقع أجهزة الطلاب داخل حدود المكتبة (GPS) + تقييمات «كيف الزحمة؟»',r:[15,140,135,185],prof:[10,25,45,62,78,88,90,82,70,58,45,30]},
+ {id:'hall',name:'مبنى القاعات 1',short:'القاعات',kind:'study',cap:24,unit:'قاعة فاضية للمذاكرة',src:'الجدول الدراسي من نظام التسجيل + GPS',r:[172,140,173,80],prof:[20,70,85,80,90,60,75,70,55,40,20,10]},
+ {id:'caf',name:'الكافتيريا الرئيسية',short:'الكافتيريا',kind:'food',cap:200,unit:'دقيقة انتظار تقريباً',src:'مواقع أجهزة الطلاب (GPS) + تقييمات «كيف الزحمة؟»',r:[172,235,100,90],prof:[25,45,55,70,60,92,85,50,40,30,20,10]},
+ {id:'cafe',name:'كافيه المبنى 5',short:'الكافيه',kind:'food',cap:60,unit:'دقيقة انتظار تقريباً',src:'مواقع أجهزة الطلاب (GPS) + تقييمات «كيف الزحمة؟»',r:[282,235,63,90],prof:[35,70,80,65,70,85,75,60,50,40,30,15]},
+ {id:'venue',name:'قاعة العرض',short:'قاعة العرض',kind:'event',cap:120,unit:'مكان فاضي',src:'أجهزة الحضور داخل حدود القاعة (GPS، بدون هوية)',prof:[5,10,20,40,60,70,60,40,20,10,5,5]},
+ {id:'pC',name:'المواقف العامة',short:'المواقف العامة (أبعد بـ 4 دقايق مشي)',kind:'parking',cap:400,unit:'موقف فاضي',src:'مواقع أجهزة الطلاب داخل حدود الموقف (GPS، بدون هوية)',r:[15,357,330,95],prof:[10,30,52,64,66,62,52,40,30,20,12,6]}
+];
+const byId=Object.fromEntries(Z.map(z=>[z.id,z]));
+const DAYS=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس'];
+const DAY_NAMES=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+let timeMode='real'; // real = device clock, sim = simulated school day for presentations
+function syncRealTime(){const d=new Date();T=d.getHours()*60+d.getMinutes();day=d.getDay()}
+const LV={low:['خفيف','var(--low)','#2BA67A'],mid:['متوسط','var(--mid)','#E3A23B'],high:['زحمة','var(--high)','#D8463B']};
+let T=580,day=0,filter='all',openId=null,predId='pA',adminId='pA';
+const noise={};Z.forEach(z=>noise[z.id]=0);
+const alerts=[];let unseen=0;
+
+const clamp=v=>Math.max(2,Math.min(100,v));
+function base(z,t){
+  // Outside working hours (Fri/Sat, before 6:30 AM or after 7 PM) the campus is nearly empty
+  const hh=t/60;if(day>4||hh<6.5||hh>=19)return 2;
+  const h=t/60-7,i=Math.max(0,Math.min(10.999,h)),a=Math.floor(i),f=i-a;
+  let v=z.prof[a]*(1-f)+z.prof[a+1]*f;const m=t%60;
+  if(z.kind==='food'&&(m>=50||m<10))v+=12;
+  if(z.id==='hall'&&(m>=50||m<10))v-=18;
+  if(hh<7)v*=(hh-6.5)/.5;if(hh>18)v*=(19-hh);
+  return clamp(v);
+}
+const occ=(z,t=T)=>{if(t===T&&typeof isLive==='function'&&isLive())return Math.min(100,Math.round(liveCount(z)/demoCap*100));return Math.round(clamp(base(z,t)+(t===T?noise[z.id]:0)))};
+const level=v=>v<55?'low':v<80?'mid':'high';
+function fmt(t){t=((t%1440)+1440)%1440;let h=Math.floor(t/60),m=t%60;const s=h<12?'ص':'م';h=h>12?h-12:h;return h+':'+String(m).padStart(2,'0')+' '+s}
+function avail(z,v){
+  if(isLive()&&z.kind!=='food')return Math.max(0,demoCap-liveCount(z));
+  if(z.kind==='food')return Math.max(1,Math.round(v/100*15));
+  return Math.max(0,Math.round(z.cap*(1-v/100)));
+}
+
+/* ---------- map ---------- */
+function buildMap(){
+  let s=`<svg viewBox="0 0 360 465" role="img" aria-label="خريطة الحرم الجامعي">
+  <defs><pattern id="park" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="10" stroke="#E6ECEB" stroke-width="4"/></pattern></defs>
+  <path class="road" d="M0 125H360M0 342H360M161 0V465"/><path class="road-c" d="M0 125H360M0 342H360M161 0V465"/>`;
+  Z.forEach(z=>{if(!z.r)return;const[x,y,w,h]=z.r;
+    s+=`<g class="zone" data-id="${z.id}" data-k="${z.kind}" tabindex="0" role="button" aria-label="${z.name}">
+    <clipPath id="c-${z.id}"><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="11"/></clipPath>
+    <rect class="z-bg" x="${x}" y="${y}" width="${w}" height="${h}" rx="11" ${z.kind==='parking'?'fill="url(#park)" style="fill:url(#park)"':''}/>
+    <rect class="z-fill" clip-path="url(#c-${z.id})" x="${x}" y="${y}" width="${w}" height="${h}" fill-opacity=".32"/>
+    <rect class="z-line" x="${x}" y="${y}" width="${w}" height="${h}" rx="11" fill="none" stroke-width="2"/>
+    <text class="z-name" x="${x+w/2}" y="${y+h/2-4}">${z.short}</text>
+    <text class="z-val" x="${x+w/2}" y="${y+h/2+15}"></text></g>`});
+  s+=`<g class="you-g" id="youG" aria-label="موقعك — اسحبه"><circle class="you-hit" id="youHit" r="22"/><circle class="you-ring" id="youRing" r="9"/><circle class="you" id="youDot" r="7" stroke="#fff" stroke-width="2.5" style="fill:#2F6FEB"/>
+  <text id="youTxt" font-size="10.5" fill="#2F6FEB" font-weight="600">أنت</text></g>
+  <text x="345" y="12" font-size="10" fill="#5B6B7E" text-anchor="end">البوابة الرئيسية ↓</text></svg>`;
+  document.getElementById('map').innerHTML=s;
+  document.querySelectorAll('.zone').forEach(g=>{
+    g.addEventListener('click',()=>openSheet(g.dataset.id));
+    g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openSheet(g.dataset.id)}});
+  });
+}
+const zoneHidden=z=>role!=='student'&&z.kind==='parking';
+function renderMap(){
+  document.querySelector('#tab-map [data-f="parking"]').hidden=role!=='student';document.getElementById('tip').hidden=role!=='student';
+  if(MAPMODE==='leaflet')renderLeaflet();else if(MAPMODE==='svg')Z.forEach(z=>{const v=occ(z),c=LV[level(v)][2],g=document.querySelector(`.zone[data-id="${z.id}"]`);if(!g)return;
+    g.querySelector('.z-fill').style.transform=`scaleY(${v/100})`;g.querySelector('.z-fill').setAttribute('fill',c);
+    g.querySelector('.z-line').setAttribute('stroke',c);
+    const t=g.querySelector('.z-val');t.textContent=v+'٪';t.setAttribute('fill',c);
+    g.classList.toggle('dim',filter!=='all'&&z.kind!==filter);g.classList.toggle('inside',here===z.id);g.classList.toggle('hidek',zoneHidden(z));
+  });
+  const parks=Z.filter(z=>z.kind==='parking'),a=byId.pA,va=occ(a);
+  const alt=parks.map(z=>({z,n:avail(z,occ(z))})).sort((x,y)=>y.n-x.n)[0];
+  const tip=document.getElementById('tip');
+  if(level(va)==='high'&&alt.z.id!=='pA')tip.innerHTML=`<p>${a.name} زحمة (${va}٪). البديل الأفضل: <b>${alt.z.name}</b> فيها ${alt.n} موقف فاضي.</p><button data-alert="pA">نبهني لما يخف</button>`;
+  else tip.innerHTML=`<p>${a.name} فيها ${avail(a,va)} موقف فاضي الحين.</p><button data-open="pA">التفاصيل</button>`;
+}
+
+/* ---------- sheet ---------- */
+function openSheet(id){openId=id;renderSheet();document.getElementById('phone').classList.add('open');document.getElementById('sheet').focus?.()}
+function closeSheet(){openId=null;document.getElementById('phone').classList.remove('open')}
+function renderSheet(){
+  if(!openId)return;if(openId==='__acct')return renderAccount();if(openId==='__chg')return renderChange();const z=byId[openId],v=occ(z),lv=level(v),n=avail(z,v);
+  const d=Math.round(base(z,T+30)-base(z,T));
+  const tr=d>3?'↑ متوقع تزيد الزحمة خلال نص ساعة':d<-3?'↓ متوقع تخف خلال نص ساعة':'→ مستقرة تقريباً';
+  const next=[30,60,90,120].map(m=>{const x=Math.round(base(z,T+m));return`<div style="--c:${LV[level(x)][1]}">${fmt(T+m).replace(/ [صم]/,'')}<b>${x}٪</b></div>`}).join('');
+  const has=alerts.some(a=>a.zid===z.id&&!a.done);
+  document.getElementById('sheet').innerHTML=`<div class="grab"></div>
+  <div class="s-head"><div><h3>${z.name}</h3>${z.note?`<small style="color:var(--muted);font-size:12.5px">${z.note}</small>`:''}</div><span class="pill" style="--c:${LV[lv][1]}">${LV[lv][0]} ${v}٪</span></div>
+  <p class="big">${n}<small>${z.unit}</small></p>
+  ${myCar&&myCar.zone===z.id?`<p class="here-note">🚗 سيارتك هنا من ${fmt(myCar.at)}</p><button class="btn ghost" data-unpark style="margin-bottom:12px">طلعت بسيارتي</button>`:here===z.id&&z.kind!=='parking'?'<p class="here-note">أنت هنا — انحسب وجودك تلقائياً وبدون هوية</p>':''}
+  <p class="trend">${tr}</p>
+  ${isLive()?`<p class="here-note" style="background:#E8F0FF;color:#2F6FEB">📱 ${devs(liveCount(z))} هنا الحين (حقيقي)${liveReportText(z)?' · تقييمات آخر ١٥ د: '+liveReportText(z):''}</p>`:''}
+  <p class="src">مصدر البيانات: <b>${isLive()?'أجهزة حقيقية متصلة الحين (Supabase)':z.src}</b></p>
+  <div class="next">${next}</div>
+  ${photosHtml(z)}
+  <button class="btn ${has?'ghost':''}" data-alert="${z.id}">${has?'التنبيه مفعّل ✓':'نبهني لما يخف'}</button>
+  <div class="report">كيف الزحمة عندك الحين؟ تحديثك يحسّن الدقة
+    <div><button data-rep="low">خفيف</button><button data-rep="mid">متوسط</button><button data-rep="high">زحمة</button></div></div>`;
+}
+
+/* ---------- predictions ---------- */
+function chips(el,cur,cb,all){el.innerHTML=Z.filter(z=>z.kind!=='event'&&(all||!zoneHidden(z))).map(z=>`<button class="chip" aria-pressed="${z.id===cur}" data-id="${z.id}">${z.name}</button>`).join('');
+  el.querySelectorAll('button').forEach(b=>b.onclick=()=>cb(b.dataset.id))}
+function renderPred(){
+  const z=byId[predId];if(zoneHidden(z)){predId='lib';return renderPred()}chips(document.getElementById('predChips'),predId,id=>{predId=id;renderPred()});
+  document.getElementById('predTitle').textContent=`الزحمة المتوقعة اليوم — ${z.name}`;
+  const nowH=Math.floor(T/60);
+  document.getElementById('bars').innerHTML=z.prof.map((p,i)=>{const h=i+7;return`<div class="bar ${h===nowH?'now':''}" style="--c:${LV[level(p)][1]}"><i style="height:${p}%"></i><span>${h>12?h-12:h}</span></div>`}).join('');
+  let calmT=null;for(let t=T+15;t<=18*60;t+=15){if(base(z,t)<55){calmT=t;break}}
+  let peak=0,pv=0;z.prof.forEach((p,i)=>{if(p>pv){pv=p;peak=i+7}});
+  document.getElementById('best').innerHTML=`<div><small>يخف المكان</small><b>${calmT?'الساعة '+fmt(calmT):(level(occ(z))==='low'?'خفيف الحين':'مو اليوم')}</b></div><div><small>وقت الذروة المعتاد</small><b>${fmt(peak*60)}</b></div>`;
+  const groups={parking:'موقف',study:'مذاكرة',food:'أكل'};
+  document.getElementById('calm').innerHTML=Object.keys(groups).map(k=>{const b=Z.filter(z=>z.kind===k).map(z=>({z,v:occ(z)})).sort((a,b)=>a.v-b.v)[0];
+    return`<div class="row"><span>${groups[k]}: <b>${b.z.name}</b></span><span class="pill" style="--c:${LV[level(b.v)][1]}">${b.v}٪</span></div>`}).join('');
+}
+
+/* ---------- alerts ---------- */
+function addAlert(id){if(alerts.some(a=>a.zid===id&&!a.done))return;alerts.unshift({zid:id,at:T,done:false});
+  toast(`بنبهك أول ما ${byId[id].name} تخف`);renderAlerts();renderSheet()}
+function renderAlerts(){
+  const el=document.getElementById('alerts');
+  if(!alerts.length){el.innerHTML='<p class="empty">ما عندك تنبيهات. افتح أي مكان من الخريطة واضغط «نبهني لما يخف».</p>';return}
+  el.innerHTML='<div class="card">'+alerts.map(a=>{const z=byId[a.zid];return`<div class="row al"><div>${z.name}<small>${a.done?'خفّت الساعة '+fmt(a.doneAt):'فعّلته الساعة '+fmt(a.at)}</small></div><span class="st ${a.done?'done':'wait'}">${a.done?'خفّت':'ننتظر'}</span></div>`}).join('')+'</div>';
+}
+function checkAlerts(){alerts.forEach(a=>{if(a.done)return;const z=byId[a.zid],v=occ(z);
+  if(v<75){a.done=true;a.doneAt=T;unseen++;
+    toast(z.kind==='parking'?`${z.name} خفّت: ${avail(z,v)} موقف فاضي الحين`:`${z.name} خفّت (${v}٪) — وقتك تروح`)}});
+  const b=document.getElementById('badge');b.textContent=unseen;b.style.display=unseen?'block':'none';
+}
+
+/* ---------- admin ---------- */
+const DF=[1.05,1,1.02,.97,.78];
+function renderAdmin(){
+  if(isLive()){const pn=document.querySelector('.part');if(pn)pn.innerHTML=`<div><b>${live.devices}</b><small>جهاز حقيقي داخل الأماكن الحين</small></div><div style="text-align:left"><b>${Z.filter(z=>liveCount(z)).length}</b><small>أماكن فيها أحد</small></div>`}
+  const z=byId[adminId];chips(document.getElementById('adminChips'),adminId,id=>{adminId=id;renderAdmin()},true);
+  const cells=DF.map(f=>z.prof.map(p=>Math.min(100,Math.round(p*f))));
+  const all=cells.flat(),avg=Math.round(all.reduce((a,b)=>a+b)/all.length),over=all.filter(v=>v>=90).length,under=all.filter(v=>v<30).length;
+  document.getElementById('kpis').innerHTML=`<div><b>${avg}٪</b><small>متوسط الإشغال</small></div><div><b>${over}</b><small>ساعة/أسبوع فوق 90٪</small></div><div><b>${under}</b><small>ساعة/أسبوع تحت 30٪</small></div>`;
+  const col=v=>`color-mix(in srgb, ${LV[level(v)][2]} ${25+v*.7}%, #fff)`;
+  let h='<span></span>'+z.prof.map((_,i)=>`<span class="h">${i+7>12?i-5:i+7}</span>`).join('');
+  cells.forEach((r,d)=>{h+=`<span class="l">${DAYS[d]}</span>`+r.map(v=>`<span class="c" style="background:${col(v)}" title="${v}٪"></span>`).join('')});
+  document.getElementById('heat').innerHTML=h;
+  const pc=byId.pC,free=avail(pc,pc.prof[3]);
+  const recs={parking:`<h4>توصية</h4>مواقف الطالبات فوق 90٪ من 9 إلى 12 الظهر، بينما المواقف العامة فيها قرابة ${free} موقف فاضي بنفس الوقت. لوحة إرشادية عند البوابة توجّه السيارات للمواقف العامة وتخفف الضغط عن مواقف الطالبات بدون أي توسعة.`,
+    study:`<h4>توصية</h4>المكتبة تتجاوز 85٪ بين 12 و2، وفي نفس الفترة فيه قاعات فاضية في مبنى القاعات 1. فتحها للمذاكرة يوزع الطلاب بدون تكلفة.`,
+    food:`<h4>توصية</h4>الذروة تتكرر بعد نهاية المحاضرات (10 دقايق قبل وبعد الساعة). نقطة بيع إضافية وقت 12 الظهر تختصر الانتظار.`};
+  document.getElementById('rec').innerHTML=recs[z.kind];
+}
+
+/* ---------- GPS ---------- */
+// Zone positions are approximate defaults; adjust them with the "Edit boundaries" tool on the map
+const UNIS={
+  yu:{name:'جامعة اليمامة — الخبر',center:[26.380235,50.217959],zoom:18,me:[26.37870,50.21800],from:[26.33,50.15],
+      geo:{lib:[26.380835,50.217259,30],hall:[26.380835,50.217959,30],caf:[26.380835,50.218659,25],cafe:[26.380235,50.218659,20],venue:[26.380235,50.217259,25],pA:[26.379535,50.217159,40],pB:[26.379535,50.218159,40],pC:[26.379535,50.219159,45]}},
+  yur:{name:'جامعة اليمامة — الرياض',center:[24.863473,46.593794],zoom:18,me:[24.86190,46.59380],from:[24.78,46.68],
+      geo:{lib:[24.864073,46.593094,30],hall:[24.864073,46.593794,30],caf:[24.864073,46.594494,25],cafe:[24.863473,46.594494,20],venue:[24.863473,46.593094,25],pA:[24.862773,46.592994,40],pB:[24.862773,46.593994,40],pC:[24.862773,46.594994,45]}}
+};
+let uniId=null,GEO={};
+const geoKey=()=>'khaffif-geo2-'+uniId;
+function loadGeo(){GEO=JSON.parse(JSON.stringify(UNIS[uniId].geo));try{const g=JSON.parse(localStorage.getItem(geoKey())||'null');if(g)Z.forEach(z=>{if(g[z.id])GEO[z.id]=g[z.id]})}catch(e){}}
+function saveGeo(){try{localStorage.setItem(geoKey(),JSON.stringify(GEO))}catch(e){}clearTimeout(saveGeo.t);saveGeo.t=setTimeout(()=>{if(typeof liveSavePlaces==='function')liveSavePlaces()},800)}
+let me={x:161,y:342},here=null,user=null,sharing=true,realGps=false,watchId=null,notifZone=null,drag=false;
+const rep_={};
+
+function placeMe(){
+  if(MAPMODE==='leaflet'){if(meMarker)meMarker.setLatLng(mePos);return}
+  const g=document.getElementById('youG');if(!g)return;
+  ['youHit','youRing','youDot'].forEach(id=>{const c=document.getElementById(id);c.setAttribute('cx',me.x);c.setAttribute('cy',me.y)});
+  const t=document.getElementById('youTxt');t.setAttribute('x',me.x+11);t.setAttribute('y',me.y-9);
+}
+function zoneAt(x,y){return Z.find(z=>{if(zoneHidden(z)||!z.r)return false;const[a,b,w,h]=z.r;return x>=a&&x<=a+w&&y>=b&&y<=b+h})}
+let myCar=null,lastFix=null,lastDrive=0;
+const CAR_SID=()=>SID+'-car';
+async function liveCar(place){if(!LIVE_READY||!uniId)return;try{
+  if(place)await sb('presence?on_conflict=session_id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates'},body:JSON.stringify({session_id:CAR_SID(),uni:uniId,place,last_seen:new Date().toISOString()})});
+  else await sb(`presence?session_id=eq.${CAR_SID()}`,{method:'DELETE'});livePoll()}catch(e){live.err=e.message}}
+function parkCar(z){if(myCar)return;myCar={zone:z.id,at:T};liveCar(z.id);toast(`وقفت سيارتك في ${z.name} — انحسبت سيارة`);renderAll()}
+function unparkCar(){if(!myCar)return;const z=byId[myCar.zone];myCar=null;liveCar(null);toast(`طلعت بسيارتك من ${z.name} — صار فيه موقف فاضي`);renderAll()}
+document.addEventListener('click',e=>{if(e.target.closest('[data-unpark]'))unparkCar()});
+function setHere(z){
+  const id=z?z.id:null;if(id===here)return;
+  const prev=here?byId[here]:null;here=id;
+  if(prev&&sharing)toast(prev.kind==='parking'&&myCar&&myCar.zone===prev.id?`سيارتك باقية في ${prev.name} — مشيت للمبنى`:prev.kind==='parking'?`طلعت من ${prev.name}`:`طلعت من ${prev.name} — نقص العدد واحد`);
+  if(z&&sharing)showNotif(z);else hideNotif();
+  // Parking is counted by cars, not phones; people are only counted in non-parking zones
+  if(sharing){if(z&&z.kind!=='parking')liveEnter(z.id);else liveExit();if(z&&z.kind==='parking'&&!realGps)parkCar(z)}
+  renderAll();
+}
+function people(z){if(isLive())return liveCount(z);return Math.round(occ(z)/100*z.cap)+(sharing&&((here===z.id&&z.kind!=='parking')||(myCar&&myCar.zone===z.id))?1:0)}
+function renderGps(){
+  const el=document.getElementById('gps');if(!el)return;
+  const mode=(realGps?'GPS حقيقي':'وضع التجربة')+(isLive()?' · بيانات حقيقية':'');
+  if(!sharing){el.innerHTML=`<span class="dot" style="background:var(--muted)"></span><div><b>المشاركة موقفة</b><small>فعّلها من حسابي عشان ينحسب وجودك</small></div>`;return}
+  if(here&&byId[here].kind==='parking'){const z=byId[here];el.innerHTML=`<span class="dot"></span><div><b>أنت في ${z.name}</b><small>${myCar&&myCar.zone===z.id?'سيارتك انحسبت كموقف مشغول':'المواقف تنحسب بالسيارات'} · ${mode}</small></div>`}
+  else if(here){const z=byId[here];el.innerHTML=`<span class="dot"></span><div><b>أنت في ${z.name}</b><small>انحسب وجودك تلقائياً · ${z.kind==='study'&&z.id==='hall'?'':ppl(people(z))+' الحين · '}${mode}</small></div>`}
+  else if(myCar)el.innerHTML=`<span class="dot"></span><div><b>🚗 سيارتك في ${byId[myCar.zone].name}</b><small>انحسبت كموقف مشغول لين تطلع بسيارتك · ${mode}</small></div>`;
+  else el.innerHTML=`<span class="dot"></span><div><b>أنت برا الأماكن</b><small>اسحب النقطة الزرقاء لأي مكان وشوف وش يصير · ${mode}</small></div>`;
+}
+function showNotif(z){notifZone=z.id;document.getElementById('nt').textContent=`وصلت ${z.name}`;document.getElementById('notif').classList.add('show');
+  clearTimeout(showNotif.t);showNotif.t=setTimeout(hideNotif,10000)}
+function hideNotif(){document.getElementById('notif').classList.remove('show')}
+document.querySelectorAll('[data-rl]').forEach(b=>b.onclick=()=>{
+  if(!notifZone)return;const lv=b.dataset.rl;rep_[notifZone]=lv;
+  noise[notifZone]=Math.max(-6,Math.min(6,noise[notifZone]+(lv==='high'?4:lv==='low'?-4:0)));
+  liveReport(notifZone,lv);hideNotif();toast('وصل تقييمك — يحسّن دقة الزحمة للكل');renderAll()});
+
+// Drag-to-move (demo mode)
+const svgEl=()=>document.querySelector('#map svg');
+function svgPt(e){const sv=svgEl(),r=sv.getBoundingClientRect();return{x:(e.clientX-r.left)/r.width*360,y:(e.clientY-r.top)/r.height*465}}
+document.addEventListener('pointerdown',e=>{if(!e.target.closest('#youG')||realGps)return;drag=true;e.preventDefault()});
+document.addEventListener('pointermove',e=>{if(!drag)return;const p=svgPt(e);me={x:Math.max(6,Math.min(354,p.x)),y:Math.max(6,Math.min(459,p.y))};placeMe()});
+document.addEventListener('pointerup',()=>{if(!drag)return;drag=false;setHere(zoneAt(me.x,me.y))});
+
+// Real GPS from the browser
+function dist(a,b,c,d){const R=6371000,r=x=>x*Math.PI/180,x=Math.sin(r(c-a)/2)**2+Math.cos(r(a))*Math.cos(r(c))*Math.sin(r(d-b)/2)**2;return 2*R*Math.asin(Math.sqrt(x))}
+function startGps(){
+  if(!navigator.geolocation){toast('المتصفح ما يدعم الموقع');realGps=false;return}
+  watchId=navigator.geolocation.watchPosition(pos=>{
+    const{latitude:la,longitude:lo}=pos.coords;
+    // Speed: from the GPS fix itself, or derived from the last two fixes
+    const now=Date.now();let sp=pos.coords.speed;
+    if((sp==null||isNaN(sp))&&lastFix){const dt=(now-lastFix.t)/1000;if(dt>0)sp=dist(la,lo,lastFix.la,lastFix.lo)/dt}
+    lastFix={la,lo,t:now};
+    const driving=sp!=null&&sp>3; // Faster than ~11 km/h = driving
+    if(driving)lastDrive=now;
+    const z=zoneAtLL(la,lo);
+    // Entered the lot driving and then slowed to walking = a car parked
+    if(z&&z.kind==='parking'&&!driving&&now-lastDrive<180000&&sharing)parkCar(z);
+    // Left the lot while driving = a car left
+    if(myCar&&driving){const[g1,g2,r]=GEO[myCar.zone];if(dist(la,lo,g1,g2)>r)unparkCar()}
+    if(MAPMODE==='leaflet'){mePos=[la,lo];placeMe();LM.panTo(mePos);setHere(z||null);return}
+    if(z){const[a,b,w,h]=z.r;me={x:a+w/2,y:b+h/2+28}}else me={x:161,y:342};
+    placeMe();setHere(z||null);
+  },()=>{toast('ما قدرنا نوصل لموقعك — تأكد من الإذن');realGps=false;renderAll()},{enableHighAccuracy:true});
+}
+function stopGps(){if(watchId!=null)navigator.geolocation.clearWatch(watchId);watchId=null}
+
+// Account sheet
+function renderAccount(){
+  document.getElementById('sheet').innerHTML=`<div class="grab"></div>
+  <div class="s-head"><h3>حسابي</h3></div>
+  <p class="trend" style="margin-top:4px">${ROLE_AR[role]} · ${user||''}</p>
+  <button class="btn ghost" id="chgUni" style="margin-bottom:6px">تغيير الجامعة أو نوع الحساب</button>
+  <button class="btn" id="openStage" style="margin-bottom:6px">🖥️ شاشة العرض للمحكمين</button>
+  <div class="set"><div><b>المشاركة في حساب الزحمة</b><small>ينحسب وجودك داخل الحرم بدون هوية</small></div><button class="sw" role="switch" aria-checked="${sharing}" data-sw="sharing" aria-label="المشاركة"></button></div>
+  <div class="set"><div><b>استخدم موقعي الحقيقي</b><small>بدل السحب — يشتغل لما تكون داخل الجامعة</small></div><button class="sw" role="switch" aria-checked="${realGps}" data-sw="gps" aria-label="GPS حقيقي"></button></div>
+  <div class="set"><div><b>بيانات حقيقية من الأجهزة</b><small>${!LIVE_READY?'غير مربوط — حطوا رابط Supabase في الكود':live.ok?`متصل · ${devs(live.devices)} داخل الأماكن الحين`:live.err?'خطأ في الاتصال: '+live.err:'جاري الاتصال…'}</small></div><button class="sw" role="switch" aria-checked="${isLive()}" data-sw="live" aria-label="بيانات حقيقية"></button></div>
+  ${isLive()?`<div class="set"><div><b>سعة العرض</b><small>كم جهاز يعتبر المكان فيه ١٠٠٪ (للتجربة بعدد قليل من الجوالات)</small></div><div style="display:flex;align-items:center;gap:8px"><button class="ff" data-cap="-1">−</button><b>${demoCap}</b><button class="ff" data-cap="1">+</button></div></div>`:''}
+  <div class="set"><div><b>الوقت الحقيقي</b><small>${timeMode==='real'?'الحين: '+DAY_NAMES[day]+' '+fmt(T):'مطفي — محاكاة يوم دوام من الأحد ٩:٤٠ (للعرض)'}</small></div><button class="sw" role="switch" aria-checked="${timeMode==='real'}" data-sw="time" aria-label="الوقت الحقيقي"></button></div>
+  <ul class="priv"><li>ما نرسل اسمك ولا رقمك الجامعي</li><li>نستخدم الموقع داخل حدود الحرم فقط</li><li>نحفظ أعداد مجمّعة، مو مسار تحركاتك</li><li>متوافق مع نظام حماية البيانات الشخصية</li></ul>`;
+}
+document.addEventListener('click',e=>{
+  const sw=e.target.closest('[data-sw]');if(!sw)return;
+  if(sw.dataset.sw==='sharing'){sharing=!sharing;if(!sharing){hideNotif();liveExit()}else if(here)liveEnter(here)}
+  else if(sw.dataset.sw==='time'){timeMode=timeMode==='real'?'sim':'real';if(timeMode==='sim'){T=580;day=0;toast('محاكاة يوم دوام — الأحد ٩:٤٠')}else{syncRealTime();toast('رجعنا للوقت الحقيقي')}}
+  else if(sw.dataset.sw==='live'){if(!LIVE_READY){toast('حطوا رابط Supabase ومفتاحه في الكود أول');return}dataMode=dataMode==='live'?'sim':'live';toast(dataMode==='live'?'صرنا على البيانات الحقيقية من الأجهزة':'رجعنا للمحاكاة');livePoll()}
+  else{realGps=!realGps;if(meMarker)meMarker.dragging[realGps?'disable':'enable']();if(realGps)startGps();else{stopGps();toast('رجعنا لوضع التجربة: اسحب النقطة')}}
+  renderAll();
+});
+document.getElementById('acct').onclick=()=>openSheet('__acct');
+document.addEventListener('click',e=>{const c=e.target.closest('[data-cap]');if(!c)return;demoCap=Math.max(1,demoCap+ +c.dataset.cap);renderAll()});
+document.addEventListener('click',e=>{if(e.target.id==='chgUni')changeUni()});
+
+// Onboarding / sign-in
+document.querySelectorAll('.uni').forEach(b=>b.onclick=()=>{document.querySelectorAll('.uni').forEach(x=>x.setAttribute('aria-pressed',x===b));uniId=b.dataset.uni;user=UNIS[uniId].name;const lg=document.getElementById('login');lg.disabled=false;lg.textContent='الدخول بحساب الجامعة'});
+document.getElementById('login').onclick=e=>{const b=e.currentTarget;b.textContent='جاري الدخول...';b.disabled=true;
+  setTimeout(()=>{document.getElementById('onb1').hidden=true;document.getElementById('onb2').hidden=false},1000)};
+document.getElementById('consent').onclick=()=>{document.getElementById('onb').classList.add('hide');applyRole();openMap();toast(`أهلاً! دخلت كـ${ROLE_AR[role]} — ${user}`)};
+function openMap(){
+  // Tear down the previous map when the user switches campus
+  if(LM){try{LM.remove()}catch(e){}LM=null}
+  LC={};LL={};handles={};editMode=false;here=null;hideNotif();
+  document.getElementById('editPanel').hidden=true;
+  loadGeo();mePos=UNIS[uniId].me.slice();
+  document.querySelector('.sim').textContent=`${user} — اسحب النقطة الزرقاء (أنت) لأي مكان`;
+  if(!initLeaflet()){MAPMODE='svg';buildMap();placeMe()}
+  renderAll();
+  // Prefer boundaries saved on the server so every device shares the same zones
+  liveLoadPlaces().then(ok=>{if(ok&&MAPMODE==='leaflet')Z.forEach(z=>{moveZone(z.id,GEO[z.id][0],GEO[z.id][1]);LC[z.id].setRadius(GEO[z.id][2])});livePoll()});
+}
+function changeUni(){closeSheet();const o=document.getElementById('onb');document.getElementById('onb2').hidden=true;document.getElementById('onb1').hidden=false;
+  document.querySelectorAll('.uni').forEach(x=>x.setAttribute('aria-pressed','false'));const lg=document.getElementById('login');lg.disabled=true;lg.textContent='الدخول بحساب الجامعة';o.classList.remove('hide')}
+
+/* ---------- Real map (Leaflet) ---------- */
+let placing=null,MAPMODE='none',LM=null,LC={},LL={},meMarker=null,mePos=[26.37860,50.21800],editMode=false,handles={},layers={};
+function zoneAtLL(la,lo){let best=null,bs=1;Z.forEach(z=>{if(zoneHidden(z)||!GEO[z.id])return;const[g1,g2,r]=GEO[z.id],k=dist(la,lo,g1,g2)/r;if(k<=bs){bs=k;best=z}});return best}
+function tagIcon(z,v,c,dim){return L.divIcon({className:'',iconSize:[0,0],html:`<div class="ltag ${dim?'dim':''}" style="--c:${c}">${z.short.replace(/ \(.*\)/,'')} <b>${v}٪</b></div>`})}
+function initLeaflet(){
+  if(!window.L)return false;
+  const el=document.getElementById('map');el.classList.add('real');
+  el.innerHTML='<div id="lmap"></div><div class="maptools"><button id="lyrG" data-lyr="google" aria-pressed="false" hidden>قوقل ماب</button><button id="lyrSat" data-lyr="sat" aria-pressed="true">قمر صناعي</button><button id="lyrClear" data-lyr="clear" aria-pressed="false">صورة أوضح</button><button id="lyrSt" data-lyr="st" aria-pressed="false">شوارع</button><button id="editBtn" aria-pressed="false">عدّل الحدود</button></div>';
+  const U=UNIS[uniId];
+  LM=L.map('lmap',{zoomControl:false,maxZoom:20}).setView(U.from,11);
+  LM.attributionControl.setPrefix(false);
+  layers.sat=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:20,maxNativeZoom:18,attribution:'Esri'});
+  // Esri Clarity: newer, often sharper imagery
+  layers.clear=L.tileLayer('https://clarity.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:20,maxNativeZoom:19,attribution:'Esri Clarity'});
+  layers.st=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:20,maxNativeZoom:19,attribution:'© OpenStreetMap'});
+  layers.sat.addTo(LM);
+  let loaded=0,errs=0;
+  layers.sat.on('tileload',()=>loaded++);
+  layers.sat.on('tileerror',()=>{errs++;if(errs>=6&&!loaded)fallbackSvg()});
+  setTimeout(()=>{if(!loaded&&MAPMODE==='leaflet')fallbackSvg()},7000);
+  L.marker(U.center,{zIndexOffset:800,interactive:false,icon:L.divIcon({className:'',iconSize:[0,0],html:`<div class="cpin">🎓 ${U.name}</div>`})}).addTo(LM);
+  setTimeout(()=>{if(LM)LM.flyTo(U.center,U.zoom,{duration:2.2})},400);
+  Z.forEach(z=>{const[la,lo,r]=GEO[z.id];
+    LC[z.id]=L.circle([la,lo],{radius:r,weight:2}).addTo(LM).on('click',()=>{if(!editMode&&!zoneHidden(z))openSheet(z.id)});
+    LL[z.id]=L.marker([la,lo],{icon:tagIcon(z,0,'#999')}).addTo(LM).on('click',()=>{if(!editMode&&!zoneHidden(z))openSheet(z.id)});
+  });
+  meMarker=L.marker(mePos,{draggable:true,zIndexOffset:1000,icon:L.divIcon({className:'',html:'<div class="lme"><i></i></div>',iconSize:[34,34],iconAnchor:[17,17]})}).addTo(LM);
+  LM.on('click',e=>{if(!placing)return;moveZone(placing,e.latlng.lat,e.latlng.lng);if(handles[placing])handles[placing].setLatLng(e.latlng);saveGeo();toast(`تم — ${byId[placing].name} في مكانه`);placing=null;document.getElementById('lmap').classList.remove('placing');renderEdit()});
+  meMarker.on('dragend',()=>{const p=meMarker.getLatLng();mePos=[p.lat,p.lng];setHere(zoneAtLL(p.lat,p.lng)||null)});
+  document.querySelectorAll('[data-lyr]').forEach(b=>b.onclick=()=>setLayer(b.dataset.lyr));
+  addGoogleLayer();
+  document.getElementById('editBtn').onclick=toggleEdit;
+  MAPMODE='leaflet';return true;
+}
+// ---------- Google Maps layer (optional) ----------
+// Add a Google Maps JavaScript API key here to enable Google satellite imagery
+const GOOGLE_MAPS_KEY='';
+function setLayer(name){
+  if(!LM||!layers[name])return;
+  ['google','sat','clear','st'].forEach(k=>{if(layers[k])LM.removeLayer(layers[k])});
+  layers[name].addTo(LM);
+  document.querySelectorAll('[data-lyr]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.lyr===name));
+}
+function addGoogleLayer(){
+  if(!GOOGLE_MAPS_KEY||!LM)return;
+  const load=src=>new Promise((res,rej)=>{const sc=document.createElement('script');sc.src=src;sc.onload=res;sc.onerror=rej;document.head.appendChild(sc)});
+  (window.google&&window.google.maps?Promise.resolve():load(`https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_KEY}`))
+    .then(()=>L.gridLayer.googleMutant?null:load('https://unpkg.com/leaflet.gridlayer.googlemutant@latest/dist/Leaflet.GoogleMutant.js'))
+    .then(()=>{if(!LM)return;layers.google=L.gridLayer.googleMutant({type:'hybrid',maxZoom:21});
+      document.getElementById('lyrG').hidden=false;setLayer('google')})
+    .catch(()=>toast('ما قدرنا نحمّل قوقل ماب — تأكدوا من المفتاح'));
+}
+function renderLeaflet(){
+  Z.forEach(z=>{if(zoneHidden(z)&&!editMode){LC[z.id].setStyle({opacity:0,fillOpacity:0});LL[z.id].setIcon(L.divIcon({className:'',html:''}));return}const v=occ(z),c=LV[level(v)][2],dim=filter!=='all'&&z.kind!==filter,on=here===z.id;
+    LC[z.id].setStyle({color:c,fillColor:c,fillOpacity:dim?.05:on?.45:.25,opacity:dim?.25:1,weight:on?4:2});
+    LL[z.id].setIcon(tagIcon(z,v,c,dim));
+  });
+}
+function fallbackSvg(){
+  if(MAPMODE!=='leaflet')return;
+  try{LM.remove()}catch(e){}
+  LM=null;MAPMODE='svg';const el=document.getElementById('map');el.classList.remove('real');
+  document.getElementById('editPanel').hidden=true;editMode=false;
+  buildMap();placeMe();renderAll();
+  toast('الخريطة الحقيقية تحتاج إنترنت — عرضنا الرسم التوضيحي');
+}
+function moveZone(id,la,lo){GEO[id][0]=la;GEO[id][1]=lo;LC[id].setLatLng([la,lo]);LL[id].setLatLng([la,lo])}
+function toggleEdit(){
+  editMode=!editMode;document.getElementById('editBtn').setAttribute('aria-pressed',editMode);
+  const panel=document.getElementById('editPanel');panel.hidden=!editMode;
+  if(editMode){
+    Z.forEach(z=>{const[la,lo]=GEO[z.id];
+      handles[z.id]=L.marker([la,lo],{draggable:true,zIndexOffset:900,icon:L.divIcon({className:'',html:'<div class="lhandle">✥</div>',iconSize:[26,26],iconAnchor:[13,-10]})}).addTo(LM);
+      handles[z.id].on('drag',e=>{const p=e.target.getLatLng();moveZone(z.id,p.lat,p.lng)});
+      handles[z.id].on('dragend',()=>{saveGeo();if(!realGps){const p=meMarker.getLatLng();setHere(zoneAtLL(p.lat,p.lng)||null)}});
+    });
+    renderEdit();toast('اسحب علامة ✥ تحت كل مكان عشان تطابق مكانه الحقيقي');
+  }else{Object.values(handles).forEach(h=>LM.removeLayer(h));handles={}}
+}
+function renderEdit(){
+  const panel=document.getElementById('editPanel');
+  panel.innerHTML=`<h4>تعديل حدود الأماكن</h4><p>اضغط «📍 حدّد» جنب أي مكان، وبعدها اضغط على مكانه الصحيح في الخريطة. أو اسحب علامة ✥. وكبّر أو صغّر الدائرة بـ + و −.</p>`+
+  Z.map(z=>`<div class="erow">${z.name}<div><button class="pick ${placing===z.id?'on':''}" data-place="${z.id}">${placing===z.id?'اضغط على الخريطة…':'📍 حدّد'}</button><button data-rad="${z.id}" data-d="-5" aria-label="صغّر">−</button><span>${GEO[z.id][2]} م</span><button data-rad="${z.id}" data-d="5" aria-label="كبّر">+</button></div></div>`).join('')+
+  `<div class="ebtns"><button id="copyGeo">انسخ الإحداثيات</button><button id="resetGeo">إرجاع الافتراضي</button></div>`;
+}
+document.addEventListener('click',e=>{
+  const pl=e.target.closest('[data-place]');if(pl){placing=placing===pl.dataset.place?null:pl.dataset.place;document.getElementById('lmap').classList.toggle('placing',!!placing);if(placing)toast(`اضغط على الخريطة مكان ${byId[placing].name}`);renderEdit();return}
+  const r=e.target.closest('[data-rad]');
+  if(r){const id=r.dataset.rad;GEO[id][2]=Math.max(10,GEO[id][2]+ +r.dataset.d);LC[id].setRadius(GEO[id][2]);saveGeo();renderEdit();return}
+  if(e.target.id==='copyGeo'){const txt=JSON.stringify(Object.fromEntries(Z.map(z=>[z.id,{name:z.name,latitude:+GEO[z.id][0].toFixed(6),longitude:+GEO[z.id][1].toFixed(6),radius:GEO[z.id][2]}])),null,2);
+    (navigator.clipboard?navigator.clipboard.writeText(txt):Promise.reject()).then(()=>toast('انسخت الإحداثيات — الصقها في كود التطبيق')).catch(()=>{prompt('انسخ الإحداثيات:',txt)});return}
+  if(e.target.id==='resetGeo'){GEO=JSON.parse(JSON.stringify(UNIS[uniId].geo));saveGeo();Z.forEach(z=>{moveZone(z.id,GEO[z.id][0],GEO[z.id][1]);LC[z.id].setRadius(GEO[z.id][2]);if(handles[z.id])handles[z.id].setLatLng([GEO[z.id][0],GEO[z.id][1]])});renderEdit()}
+});
+
+/* ---------- Live shared data (Supabase) ---------- */
+// Project URL and anon key from Supabase → Project Settings → API
+const SUPABASE_URL='';
+const SUPABASE_KEY='';
+const LIVE_READY=!!(SUPABASE_URL&&SUPABASE_KEY);
+let dataMode=LIVE_READY?'live':'sim',demoCap=5,live={counts:{},reports:{},devices:0,ok:false,err:''};
+const SID=(()=>{try{let s=localStorage.getItem('khaffif-sid');if(!s){s=(crypto.randomUUID?crypto.randomUUID():Math.random().toString(36).slice(2));localStorage.setItem('khaffif-sid',s)}return s}catch(e){return Math.random().toString(36).slice(2)}})();
+const isLive=()=>dataMode==='live'&&LIVE_READY;
+async function sb(path,opt={}){
+  const r=await fetch(`${SUPABASE_URL}/rest/v1/${path}`,{...opt,headers:{apikey:SUPABASE_KEY,Authorization:`Bearer ${SUPABASE_KEY}`,'Content-Type':'application/json',...(opt.headers||{})}});
+  if(!r.ok)throw new Error(r.status+' '+(await r.text()).slice(0,120));
+  const t=await r.text();return t?JSON.parse(t):null;
+}
+async function liveEnter(place){if(!LIVE_READY||!uniId)return;try{await sb('presence?on_conflict=session_id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates'},body:JSON.stringify({session_id:SID,uni:uniId,place,last_seen:new Date().toISOString()})});livePoll()}catch(e){live.err=e.message}}
+async function liveExit(){if(!LIVE_READY)return;try{await sb(`presence?session_id=eq.${SID}`,{method:'DELETE'});livePoll()}catch(e){live.err=e.message}}
+async function liveReport(place,level){if(!LIVE_READY||!uniId)return;try{await sb('reports',{method:'POST',body:JSON.stringify({session_id:SID,uni:uniId,place,level})});livePoll()}catch(e){live.err=e.message}}
+async function livePoll(){
+  if(!LIVE_READY||!uniId)return;
+  try{
+    const [c,r]=await Promise.all([sb(`place_counts?uni=eq.${uniId}`),sb(`place_reports?uni=eq.${uniId}`)]);
+    live.counts={};live.devices=0;(c||[]).forEach(x=>{live.counts[x.place]=x.devices;live.devices+=x.devices});
+    live.reports={};(r||[]).forEach(x=>{live.reports[x.place]=x});
+    live.ok=true;live.err='';
+  }catch(e){live.ok=false;live.err=e.message}
+  if(isLive())renderAll();else renderAccountIfOpen();
+}
+async function liveLoadPlaces(){
+  if(!LIVE_READY||!uniId)return false;
+  try{const rows=await sb(`places?uni=eq.${uniId}`);if(!rows||!rows.length)return false;
+    rows.forEach(r=>{if(GEO[r.id])GEO[r.id]=[r.lat,r.lng,r.radius]});return true}catch(e){live.err=e.message;return false}
+}
+async function liveSavePlaces(){
+  if(!LIVE_READY||!uniId)return;
+  try{await sb('places?on_conflict=uni,id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates'},body:JSON.stringify(Z.map(z=>({uni:uniId,id:z.id,name:z.name,lat:GEO[z.id][0],lng:GEO[z.id][1],radius:GEO[z.id][2]})))})}catch(e){live.err=e.message}
+}
+const devs=n=>n===0?'ولا جهاز':n===1?'جهاز واحد':n===2?'جهازين':n<=10?`${n} أجهزة`:`${n} جهاز`;
+const ppl=n=>n===1?'شخص واحد':n===2?'شخصين':n>=3&&n<=10?`${n} أشخاص`:`${n} شخص`;
+function liveCount(z){return live.counts[z.id]||0}
+function liveReportText(z){const r=live.reports[z.id];if(!r)return'';const t=[];if(r.high)t.push(`زحمة ${r.high}`);if(r.mid)t.push(`متوسط ${r.mid}`);if(r.low)t.push(`خفيف ${r.low}`);return t.join(' · ')}
+function renderAccountIfOpen(){if(openId==='__acct')renderAccount()}
+setInterval(livePoll,3000);
+setInterval(()=>{if(here&&sharing)liveEnter(here)},30000); // Heartbeat every 30 s so the device is not expired
+window.addEventListener('pagehide',()=>{if(LIVE_READY)fetch(`${SUPABASE_URL}/rest/v1/presence?session_id=eq.${SID}`,{method:'DELETE',keepalive:true,headers:{apikey:SUPABASE_KEY,Authorization:`Bearer ${SUPABASE_KEY}`}})});
+
+/* ---------- Roles, study finder and rooms ---------- */
+let role='student',studyMode='solo',photoZone=null;
+const PHOTOS={};
+const ROLE_AR={student:'طالب',faculty:'عضو هيئة تدريس',admin:'إدارة'};
+const SLOTS=[[8,9.25],[9.5,10.75],[11,12.25],[13,14.25],[14.5,15.75],[16,17.25]];
+const ROOMS=[
+  {id:'A101',name:'قاعة A101',bld:'مبنى القاعات 1',cap:40,feat:['شاشة','سبورة'],type:'class',use:.7},
+  {id:'A104',name:'قاعة A104',bld:'مبنى القاعات 1',cap:30,feat:['سبورة'],type:'class',use:.6},
+  {id:'A201',name:'قاعة A201',bld:'مبنى القاعات 1',cap:60,feat:['شاشة','سبورة','صوتيات'],type:'class',use:.75},
+  {id:'A205',name:'قاعة A205',bld:'مبنى القاعات 1',cap:25,feat:['سبورة','شاشة'],type:'class',use:.18},
+  {id:'B110',name:'قاعة B110',bld:'مبنى 2',cap:35,feat:['شاشة'],type:'class',use:.25},
+  {id:'B210',name:'مدرج B210',bld:'مبنى 2',cap:90,feat:['شاشة','صوتيات'],type:'class',use:.55},
+  {id:'LAB3',name:'معمل حاسب 3',bld:'مبنى 2',cap:30,feat:['أجهزة','شاشة'],type:'lab',use:.45},
+  {id:'LG1',name:'غرفة نقاش 1',bld:'المكتبة — الدور الأول',cap:6,feat:['شاشة','سبورة'],type:'lib',use:.45},
+  {id:'LG2',name:'غرفة نقاش 2',bld:'المكتبة — الدور الأول',cap:6,feat:['سبورة'],type:'lib',use:.35},
+  {id:'LP1',name:'غرفة التدريب على العرض',bld:'المكتبة — الدور الأرضي',cap:8,feat:['شاشة','كاميرا تسجيل'],type:'lib',use:.3},
+];
+const roomById=Object.fromEntries(ROOMS.map(r=>[r.id,r]));
+const MY_CLASSES=[
+  {id:'c1',code:'CS 210',title:'برمجة 2',room:'A104',days:[0,2,4],slot:0,n:28,need:['سبورة']},
+  {id:'c2',code:'CS 311',title:'هياكل البيانات',room:'A201',days:[0,2],slot:2,n:38,need:['شاشة']},
+  {id:'c3',code:'AI 301',title:'مقدمة في الذكاء الاصطناعي',room:'B210',days:[1,3],slot:3,n:55,need:['شاشة','صوتيات']},
+];
+const seeded=i=>{const x=Math.sin(i*99.13)*10000;return x-Math.floor(x)};
+const SCHED={};
+ROOMS.forEach((r,ri)=>{SCHED[r.id]=[0,1,2,3,4].map(d=>SLOTS.map((s,si)=>seeded(ri*37+d*7+si+1)<r.use))});
+MY_CLASSES.forEach(c=>c.days.forEach(d=>{SCHED[c.room][d][c.slot]=true}));
+const LIB_ZONES=[{name:'الدور الأرضي — منطقة هادئة',cap:80,k:1.05,quiet:true},{name:'الدور الأول — مذاكرة جماعية',cap:40,k:.9,quiet:false},{name:'منطقة الحواسيب',cap:30,k:.55,quiet:true}];
+
+let RS={bookings:[],requests:[]};
+const rsKey=()=>'khaffif-rooms-'+(uniId||'x');
+function loadRS(){try{RS=JSON.parse(localStorage.getItem(rsKey())||'null')||{bookings:[],requests:[]}}catch(e){RS={bookings:[],requests:[]}}}
+function saveRS(){try{localStorage.setItem(rsKey(),JSON.stringify(RS))}catch(e){}}
+const hNow=()=>T/60;
+const fmtH=h=>fmt(Math.round(h*60));
+function slotAt(h){return SLOTS.findIndex(([a,b])=>h>=a&&h<b)}
+function busyAt(roomId,d,h){
+  if(d>4)return false;
+  const si=slotAt(h);
+  if(si>=0){
+    const movedOut=RS.requests.some(q=>q.status==='approved'&&q.from===roomId&&q.day===d&&q.slot===si);
+    const movedIn=RS.requests.some(q=>q.status==='approved'&&q.to===roomId&&q.day===d&&q.slot===si);
+    if(movedIn)return true;
+    if(SCHED[roomId][d][si]&&!movedOut)return true;
+  }
+  return RS.bookings.some(b=>b.room===roomId&&b.day===d&&h>=b.start&&h<b.end);
+}
+function freeUntil(roomId,d,h){for(let x=Math.ceil(h*4)/4;x<18;x+=.25){if(busyAt(roomId,d,x))return x}return 18}
+function utilization(roomId){let n=0,t=0;for(let d=0;d<5;d++)SLOTS.forEach((s,si)=>{t++;if(SCHED[roomId][d][si])n++});return Math.round(n/t*100)}
+function myBooking(){return RS.bookings.find(b=>b.mine&&b.day===day&&hNow()<b.end)}
+
+// ---- Study finder ----
+function renderStudy(){
+  const el=document.getElementById('studyList');if(!el)return;
+  const h=hNow(),lib=byId.lib,lv=occ(lib);
+  if(day>4||h<7||h>=18){el.innerHTML=`<p class="empty">${day>4?'اليوم إجازة':'برا وقت الدوام الحين'} — الحرم مقفل. تقدر تجرب قسم المذاكرة على يوم دوام من حسابي ← "الوقت الحقيقي".</p>`;return}
+  document.querySelectorAll('#studyModes .chip').forEach(c=>c.setAttribute('aria-pressed',c.dataset.m===studyMode));
+  const zones=LIB_ZONES.filter(z=>studyMode==='solo'?z.quiet:studyMode==='group'?!z.quiet:false);
+  const zHtml=zones.map(z=>{const used=Math.min(z.cap,Math.round(z.cap*lv/100*z.k)),free=z.cap-used,l=level(used/z.cap*100);
+    return`<div class="row"><span>${z.name}</span><span class="pill" style="--c:${LV[l][1]}">${free} مقعد فاضي</span></div>`}).join('');
+  const need=studyMode==='present'?['شاشة']:[];
+  const minCap=studyMode==='group'?4:1;
+  const rooms=ROOMS.filter(r=>r.cap>=minCap&&need.every(f=>r.feat.includes(f))&&(studyMode!=='solo'||r.type!=='lib'||true))
+    .map(r=>({r,busy:busyAt(r.id,day,h),until:freeUntil(r.id,day,h)}))
+    .filter(x=>!x.busy&&x.until-h>=.5)
+    .sort((a,b)=>(a.r.type==='lib'?-1:0)-(b.r.type==='lib'?-1:0)||b.until-a.until);
+  const mine=myBooking();
+  const rHtml=rooms.length?rooms.map(({r,until})=>`<div class="room">
+      <div class="rt"><div><b>${r.name}</b><small>${r.bld} · يتسع ${r.cap}</small></div><span class="free">فاضية لين ${fmtH(until)}</span></div>
+      <div class="feats">${r.feat.map(f=>`<span>${f}</span>`).join('')}</div>
+      ${mine?'':`<button class="btn ghost sm" data-book="${r.id}">${r.type==='lib'?'احجزها لساعتين':'أنا رايح لها'}</button>`}
+    </div>`).join(''):'<p class="empty">ما فيه قاعات فاضية تناسبك الحين. جرّب بعد شوي أو غيّر النوع.</p>';
+  const head={solo:'مذاكرة فردية — أماكن هادية',group:'مذاكرة جماعية — غرف وقاعات',present:'تحضير عرض تقديمي — فيها شاشة'}[studyMode];
+  el.innerHTML=`${mine?`<div class="card mine"><b>محجوزة لك: ${roomById[mine.room].name}</b><small>${roomById[mine.room].bld} · لين ${fmtH(mine.end)}</small><button class="btn ghost sm" data-unbook="1">إلغاء الحجز</button></div>`:''}
+    ${zones.length?`<div class="card"><h4>المكتبة الحين</h4>${zHtml}</div>`:''}
+    <h4 class="lh">${head}</h4>${rHtml}
+    <p class="note">القاعات الفاضية من الجدول الدراسي، وتتحدث لحالها مع أي تغيير أو حجز.</p>`;
+}
+document.addEventListener('click',e=>{
+  const m=e.target.closest('#studyModes .chip');if(m){studyMode=m.dataset.m;renderStudy();logStudySearch();return}
+  const b=e.target.closest('[data-book]');if(b){const r=roomById[b.dataset.book],h=Math.round(hNow()*4)/4;
+    const end=Math.min(h+2,freeUntil(r.id,day,h));RS.bookings.push({room:r.id,day,start:h,end,mine:true});saveRS();
+    toast(r.type==='lib'?`حجزنا لك ${r.name} لين ${fmtH(end)}`:`تمام — بنعلم غيرك إن ${r.name} فيها أحد`);renderAll();return}
+  if(e.target.closest('[data-unbook]')){RS.bookings=RS.bookings.filter(x=>!(x.mine&&x.day===day));saveRS();toast('ألغينا الحجز');renderAll();return}
+});
+
+// ---- Rooms: faculty requests and admin approval ----
+function effRoom(c,d){const q=RS.requests.find(q=>q.cls===c.id&&q.day===d&&q.status==='approved');return q?q.to:c.room}
+function candidates(c,d){return ROOMS.filter(r=>r.type!=='lib'&&r.id!==effRoom(c,d)&&r.cap>=c.n&&c.need.every(f=>r.feat.includes(f))&&!busyAt(r.id,d,(SLOTS[c.slot][0]+SLOTS[c.slot][1])/2)).sort((a,b)=>a.cap-b.cap)}
+function renderRooms(){
+  const el=document.getElementById('roomsBody');if(!el)return;
+  if(role==='faculty'){
+    const today=MY_CLASSES.filter(c=>c.days.includes(day));
+    el.innerHTML=`<h2>محاضراتي اليوم</h2><p class="sub">${DAY_NAMES[day]} · غيّر القاعة بضغطة بدل ما تكلم الجامعة</p>`+
+     (today.length?today.map(c=>{const q=RS.requests.find(q=>q.cls===c.id&&q.day===day&&q.status!=='rejected');const room=roomById[effRoom(c,day)];const[s,f]=SLOTS[c.slot];
+      return`<div class="room"><div class="rt"><div><b>${c.code} — ${c.title}</b><small>${fmtH(s)} – ${fmtH(f)} · ${c.n} طالب</small></div><span class="free" style="background:var(--soft);color:var(--brand)">${room.name}</span></div>
+      ${q?`<p class="st ${q.status==='approved'?'done':'wait'}" style="display:inline-block;margin-top:8px">${q.status==='approved'?`انتقلت إلى ${roomById[q.to].name} ✓ · وصل إشعار للطلاب`:`طلب نقل إلى ${roomById[q.to].name} — بانتظار الإدارة`}</p>`:`<button class="btn ghost sm" data-chg="${c.id}">غيّر القاعة</button>`}</div>`}).join('')
+     :'<p class="empty">ما عندك محاضرات اليوم.</p>');
+  }else{
+    const pend=RS.requests.filter(q=>q.status==='pending');
+    const util=ROOMS.filter(r=>r.type!=='lib').map(r=>({r,u:utilization(r.id)})).sort((a,b)=>a.u-b.u);
+    el.innerHTML=`<h2>القاعات</h2><p class="sub">طلبات التغيير ونسبة استخدام كل قاعة</p>
+     <div class="card"><h4>طلبات تغيير القاعات ${pend.length?`(${pend.length})`:''}</h4>${pend.length?pend.map(q=>{const c=MY_CLASSES.find(x=>x.id===q.cls);
+       return`<div class="req"><div><b>${c.code} · د. ${q.by}</b><small>${roomById[q.from].name} ← ${roomById[q.to].name} · ${DAYS[q.day]} ${fmtH(SLOTS[q.slot][0])} · ${q.reason}</small></div><div class="ra"><button data-appr="${q.id}">اعتماد</button><button data-rej="${q.id}">رفض</button></div></div>`}).join(''):'<p class="m" style="color:var(--muted);font-size:13px">ما فيه طلبات الحين.</p>'}</div>
+     <div class="card"><h4>استخدام القاعات خلال الأسبوع</h4>${util.map(({r,u})=>`<div class="ub"><span>${r.name}</span><div class="ubar"><i style="width:${u}%;background:${u<35?'var(--high)':u<60?'var(--mid)':'var(--low)'}"></i></div><b>${u}٪</b></div>`).join('')}</div>`;
+  }
+}
+let chgCls=null;
+function renderChange(){
+  const c=MY_CLASSES.find(x=>x.id===chgCls),list=candidates(c,day),[s,f]=SLOTS[c.slot];
+  document.getElementById('sheet').innerHTML=`<div class="grab"></div><div class="s-head"><h3>غيّر قاعة ${c.code}</h3></div>
+   <p class="trend" style="margin-top:4px">${DAY_NAMES[day]} ${fmtH(s)} – ${fmtH(f)} · ${c.n} طالب · يحتاج: ${c.need.join('، ')}</p>
+   <label class="sel">السبب <select id="chgReason"><option>عدد الطلاب ما يناسب القاعة</option><option>مشكلة في الأجهزة</option><option>قاعة أقرب للقسم</option><option>سبب آخر</option></select></label>
+   ${list.length?list.map(r=>`<div class="room"><div class="rt"><div><b>${r.name}</b><small>${r.bld} · يتسع ${r.cap}</small></div><button class="btn sm" style="width:auto;padding:8px 14px" data-pick="${r.id}">اطلب</button></div><div class="feats">${r.feat.map(x=>`<span>${x}</span>`).join('')}</div></div>`).join('')
+     :'<p class="empty">ما فيه قاعة فاضية تناسب هالمحاضرة في نفس الوقت.</p>'}`;
+}
+document.addEventListener('click',e=>{
+  const c=e.target.closest('[data-chg]');if(c){chgCls=c.dataset.chg;openSheet('__chg');return}
+  const p=e.target.closest('[data-pick]');if(p){const cl=MY_CLASSES.find(x=>x.id===chgCls);
+    RS.requests.push({id:'q'+Date.now(),cls:cl.id,from:effRoom(cl,day),to:p.dataset.pick,day,slot:cl.slot,status:'pending',by:'سارة',reason:document.getElementById('chgReason').value});saveRS();
+    closeSheet();toast('وصل طلبك للإدارة — بنبلغك أول ما ينعتمد');renderAll();return}
+  const a=e.target.closest('[data-appr]');if(a){const q=RS.requests.find(x=>x.id===a.dataset.appr);q.status='approved';saveRS();
+    const cl=MY_CLASSES.find(x=>x.id===q.cls);toast(`اعتمدنا النقل — وصل إشعار لـ${cl.n} طالب في الشعبة`);renderAll();return}
+  const r=e.target.closest('[data-rej]');if(r){RS.requests.find(x=>x.id===r.dataset.rej).status='rejected';saveRS();toast('رفضنا الطلب وبلغنا الدكتور');renderAll();return}
+});
+
+// ---- Student photos ----
+document.addEventListener('click',e=>{const b=e.target.closest('[data-photo]');if(!b)return;photoZone=b.dataset.photo;document.getElementById('photoIn').click()});
+document.getElementById('photoIn').addEventListener('change',e=>{const f=e.target.files[0];if(!f||!photoZone)return;
+  if(photoZone.startsWith('sugg:')){const id=photoZone.slice(5);(SUGG_STATE[id]=SUGG_STATE[id]||{}).photo=URL.createObjectURL(f);e.target.value='';renderUnderused();toast('حطينا التغييرات على صورتكم');return}
+  (PHOTOS[photoZone]=PHOTOS[photoZone]||[]).unshift({url:URL.createObjectURL(f),t:T});e.target.value='';
+  toast('تم — صورتك تساعد غيرك يشوف الوضع');renderAll()});
+function photosHtml(z){const ps=(PHOTOS[z.id]||[]).filter(p=>T-p.t<=60);
+  return`<div class="photos"><div class="ph-h"><b>صور من الطلاب (آخر ساعة)</b><button data-photo="${z.id}">📷 أضف صورة</button></div>
+  ${ps.length?`<div class="ph-g">${ps.map(p=>`<figure><img src="${p.url}" alt="صورة من ${z.name}"><figcaption>قبل ${Math.max(1,T-p.t)} د</figcaption></figure>`).join('')}</div>`:'<p class="ph-e">ما فيه صور للحين — أول واحد يصوّر يساعد الكل</p>'}</div>`}
+
+// ---- Admin suggestions: under-used spaces ----
+function underusedHtml(){
+  const low=ROOMS.filter(r=>r.type!=='lib').map(r=>({r,u:utilization(r.id)})).filter(x=>x.u<35).sort((a,b)=>a.u-b.u);
+  const items=low.map(({r,u})=>`<li><b>${r.name}</b> مستخدمة ${u}٪ بس من الأسبوع، وفيها ${r.feat.join(' و')}. حوّلوها لقاعة مذاكرة وتحضير عروض في الفترات الفاضية، لأن الطلب على أماكن المذاكرة يوصل للذروة من ١٢ إلى ٢.</li>`);
+  items.push('<li><b>منطقة الحواسيب في المكتبة</b> نادراً تتعدى نصف السعة. تقليل الأجهزة للنص وتحويل الباقي لمقاعد هادية يزيد أماكن المذاكرة الفردية.</li>');
+  items.push('<li><b>المواقف العامة</b> ما تتعدى ٦٥٪ حتى وقت الذروة. لوحة إرشادية عند البوابة تحوّل جزء من الضغط عن مواقف الطالبات بدون أي توسعة.</li>');
+  return`<div class="card"><h4>مساحات ما تنستغل كويس — اقتراحات</h4><ul class="sugg-l">${items.join('')}</ul></div>`}
+
+// ---- Before / after concept drawings ----
+const SUGG_STATE={};
+const pin=(x,y,n)=>`<g><circle cx="${x}" cy="${y}" r="9" fill="#D8463B" stroke="#fff" stroke-width="2"/><text x="${x}" y="${y+3.5}" text-anchor="middle" font-size="10" font-weight="700" fill="#fff">${n}</text></g>`;
+const svgWrap=(inner,bg)=>`<svg viewBox="0 0 320 200" preserveAspectRatio="xMidYMid meet"><rect width="320" height="200" fill="${bg}"/><rect x="4" y="4" width="312" height="192" rx="6" fill="none" stroke="#8A97A6" stroke-width="3"/>${inner}</svg>`;
+function roomBefore(){let d='';for(let r=0;r<4;r++)for(let c=0;c<6;c++)d+=`<rect x="${42+c*40}" y="${52+r*32}" width="26" height="14" rx="2" fill="#C9D1D0"/><circle cx="${55+c*40}" cy="${73+r*32}" r="4" fill="#DDE3E2"/>`;
+  return svgWrap(`<rect x="100" y="14" width="120" height="9" fill="#fff" stroke="#8A97A6"/><text x="160" y="38" text-anchor="middle" font-size="10" fill="#5B6B7E">سبورة</text>${d}`,'#F1EFEA')}
+function roomAfter(){const tbl=(x,y)=>`<circle cx="${x}" cy="${y}" r="20" fill="#fff" stroke="#0E6E73" stroke-width="2"/>`+[0,72,144,216,288].map(a=>{const t=a*Math.PI/180;return`<circle cx="${x+30*Math.cos(t)}" cy="${y+30*Math.sin(t)}" r="6" fill="#E3A23B"/>`}).join('');
+  let pw='';for(let i=0;i<6;i++)pw+=`<rect x="7" y="${40+i*24}" width="4" height="8" rx="1" fill="#E3A23B"/>`;
+  return svgWrap(`<rect x="105" y="12" width="110" height="14" rx="2" fill="#13233A"/><text x="160" y="22.5" text-anchor="middle" font-size="8" fill="#fff">شاشة عرض</text>
+   ${tbl(70,78)}${tbl(160,78)}${tbl(250,78)}
+   <rect x="28" y="136" width="96" height="34" rx="12" fill="#0E6E73" opacity=".85"/><rect x="34" y="128" width="84" height="12" rx="6" fill="#0E6E73"/><text x="76" y="158" text-anchor="middle" font-size="9" fill="#fff">جلسات هادية</text>
+   <rect x="208" y="126" width="92" height="56" rx="4" fill="#DCEFEF" stroke="#0E6E73" stroke-dasharray="4 3" stroke-width="1.6"/><text x="254" y="150" text-anchor="middle" font-size="8.5" fill="#0E6E73" font-weight="700">غرفة تدريب</text><text x="254" y="162" text-anchor="middle" font-size="8.5" fill="#0E6E73" font-weight="700">على العرض</text>${pw}
+   ${pin(160,12,1)}${pin(160,52,2)}${pin(76,124,3)}${pin(254,122,4)}${pin(14,34,5)}`,'#EAF4F1')}
+function libBefore(){let d='';for(let r=0;r<3;r++)for(let c=0;c<8;c++)d+=`<rect x="${28+c*34}" y="${40+r*50}" width="24" height="16" rx="2" fill="#C9D1D0"/><rect x="${33+c*34}" y="${33+r*50}" width="14" height="9" rx="1" fill="#5B6B7E"/>`;
+  return svgWrap(d+'<text x="160" y="188" text-anchor="middle" font-size="9" fill="#5B6B7E">٣٠ جهاز — نادراً يتعدى النص</text>','#F1EFEA')}
+function libAfter(){let d='';for(let c=0;c<8;c++)d+=`<rect x="${28+c*34}" y="40" width="24" height="16" rx="2" fill="#C9D1D0"/><rect x="${33+c*34}" y="33" width="14" height="9" rx="1" fill="#5B6B7E"/>`;
+  for(let c=0;c<13;c++)d+=`<circle cx="${28+c*22}" cy="76" r="6" fill="#2BA67A" opacity=".8"/>`;
+  for(let r=0;r<2;r++)for(let c=0;c<8;c++){const x=28+c*34,y=100+r*44;d+=`<rect x="${x}" y="${y}" width="26" height="18" rx="2" fill="#fff" stroke="#0E6E73"/><line x1="${x}" y1="${y-8}" x2="${x}" y2="${y+18}" stroke="#0E6E73" stroke-width="2"/><circle cx="${x+20}" cy="${y+5}" r="3" fill="#E3A23B"/>`}
+  return svgWrap(d+pin(150,30,1)+pin(300,76,2)+pin(150,98,3)+pin(56,105,4),'#EAF4F1')}
+function parkBase(after){let d='';for(let r=0;r<3;r++)for(let c=0;c<9;c++){const car=(r*9+c)%4===0;d+=`<rect x="${20+c*20}" y="${30+r*48}" width="14" height="28" rx="2" fill="${car?'#D8463B':'none'}" stroke="#B7C1C0" opacity="${car?.8:1}"/>`}
+  d+=`<rect x="236" y="40" width="72" height="110" rx="4" fill="#13233A"/><text x="272" y="98" text-anchor="middle" font-size="9" fill="#fff">مبنى القاعات</text><rect x="14" y="176" width="40" height="12" fill="#8A97A6"/><text x="34" y="185" text-anchor="middle" font-size="7" fill="#fff">البوابة</text>`;
+  if(!after)return svgWrap(d+'<path d="M110 170 Q180 175 236 120" stroke="#8A97A6" stroke-width="2" stroke-dasharray="4 4" fill="none"/>','#F1EFEA');
+  return svgWrap(d+`<path d="M110 172 Q180 176 236 124" stroke="#2BA67A" stroke-width="10" fill="none" opacity=".35"/><path d="M110 172 Q180 176 236 124" stroke="#0E6E73" stroke-width="2" stroke-dasharray="2 6" fill="none"/>
+   ${[0,1,2,3,4,5].map(i=>`<rect x="${130+i*17}" y="${160-i*6}" width="12" height="4" fill="#E3A23B"/>`).join('')}
+   <rect x="60" y="150" width="62" height="22" rx="3" fill="#13233A"/><text x="91" y="160" text-anchor="middle" font-size="7" fill="#2BA67A" font-weight="700">المواقف العامة</text><text x="91" y="169" text-anchor="middle" font-size="7.5" fill="#fff" font-weight="700">١٤٨ فاضي</text>
+   ${pin(91,144,1)}${pin(185,150,2)}${pin(110,24,3)}`,'#EAF4F1')}
+const CONCEPTS=[
+  {id:'room',zone:'hall',title:r=>`${r.name}: من قاعة شبه فاضية إلى قاعة مذاكرة وعروض`,metric:r=>`مستخدمة ${utilization(r.id)}٪ بس من الأسبوع`,before:roomBefore,after:roomAfter,
+   changes:['شاشة عرض لتحضير العروض والتدرّب عليها','طاولات جماعية قابلة للطي بدل الصفوف — ترجع قاعة محاضرات وقت الحاجة','جلسات هادية للمذاكرة الفردية','غرفة زجاجية صغيرة للتدريب على العرض','مقابس كهرباء على طول الجدار'],
+   pins:[[50,6],[50,26],[24,62],[79,61],[4,17]],impact:'+٢٤ مقعد مذاكرة · تكلفة أثاث فقط · بدون أي بناء'},
+  {id:'lib',zone:'lib',title:()=>'منطقة الحواسيب في المكتبة: نص الأجهزة يكفي',metric:()=>'نادراً تتعدى ٥٠٪ من السعة',before:libBefore,after:libAfter,
+   changes:['نخلي ١٥ جهاز بس — يكفي حتى وقت الذروة','فاصل نباتات يعزل الصوت','مقاعد فردية بفواصل جانبية مكان باقي الأجهزة','إضاءة مكتب ومقبس لكل مقعد'],
+   pins:[[47,15],[94,38],[47,49],[17,52]],impact:'+١٦ مقعد هادي · أقرب منطقة للمذاكرة الفردية'},
+  {id:'park',zone:'pC',title:()=>'المواقف العامة: تخفيف الضغط عن مواقف الطالبات',metric:()=>'ما تتعدى ٦٥٪ حتى وقت الذروة',before:()=>parkBase(false),after:()=>parkBase(true),
+   changes:['لوحة رقمية عند البوابة تعرض المواقف الفاضية من خفّف مباشرة','ممر مظلل من المواقف للمبنى يخلي المشي أريح','تخطيط أرضي واضح يوجّه للمداخل'],
+   pins:[[28,72],[58,75],[34,12]],impact:'يخفف مواقف الطالبات بدون إضافة موقف واحد'}
+];
+function conceptCard(c){
+  const low=ROOMS.filter(r=>r.type!=='lib').map(r=>({r,u:utilization(r.id)})).sort((a,b)=>a.u-b.u)[0].r;
+  const st=SUGG_STATE[c.id]||{};
+  const photo=st.photo?`<div class="pp"><img src="${st.photo}" alt="صورة المكان">${c.pins.map(([x,y],i)=>`<span style="left:${x}%;top:${y}%">${i+1}</span>`).join('')}</div><p class="ph-e">صورتكم مع أماكن التغييرات المقترحة (تقريبية)</p>`:'';
+  return`<div class="card cc" data-cc="${c.id}">
+    <h4>${c.title(low)}</h4><p class="cm">${c.metric(low)}</p>
+    <div class="ba" style="--p:50%"><div class="ba-a">${c.after()}</div><div class="ba-b">${c.before(low)}</div><i class="ba-line"></i><span class="ba-l">قبل</span><span class="ba-r">بعد</span></div>
+    <input class="ba-in" type="range" min="0" max="100" value="50" dir="ltr" aria-label="قارن قبل وبعد">
+    ${photo}
+    <ol class="chg">${c.changes.map(x=>`<li>${x}</li>`).join('')}</ol>
+    <p class="imp">${c.impact}</p>
+    <div class="cc-b"><button data-ccmap="${c.zone}">📍 وين المكان</button><button data-ccphoto="${c.id}">📷 صورة المكان</button>
+    ${st.ok?'<span class="st done">معتمد ✓ أُضيف لخطة التطوير</span>':`<button class="pri" data-ccok="${c.id}">اعتماد الاقتراح</button>`}</div>
+  </div>`;
+}
+function renderUnderused(){const uu=document.getElementById('underused');if(!uu||!uniId)return;
+  uu.innerHTML=`${unmetHtml()}<h3 class="lh" style="margin-top:14px">مساحات ما تنستغل كويس — وش ممكن تصير</h3>${CONCEPTS.map(conceptCard).join('')}`}
+document.addEventListener('input',e=>{const r=e.target.closest('.ba-in');if(!r)return;r.previousElementSibling.style.setProperty('--p',r.value+'%')});
+document.addEventListener('click',e=>{
+  const ok=e.target.closest('[data-ccok]');if(ok){(SUGG_STATE[ok.dataset.ccok]=SUGG_STATE[ok.dataset.ccok]||{}).ok=true;renderUnderused();toast('اعتمدنا الاقتراح وأضفناه لخطة التطوير');return}
+  const ph=e.target.closest('[data-ccphoto]');if(ph){photoZone='sugg:'+ph.dataset.ccphoto;document.getElementById('photoIn').click();return}
+  const mp=e.target.closest('[data-ccmap]');if(mp){const id=mp.dataset.ccmap;
+    document.querySelectorAll('nav button').forEach(b=>b.setAttribute('aria-selected',b.dataset.t==='map'));
+    document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.id==='tab-map'));document.querySelector('main').scrollTop=0;
+    if(MAPMODE==='leaflet'){LM.flyTo([GEO[id][0],GEO[id][1]],19,{duration:1.2});LC[id].setStyle({weight:7});setTimeout(()=>renderAll(),2500)}
+    toast(`هذا مكان: ${byId[id].name}`);return}
+});
+
+// ---- Unmet demand ----
+// Each time a student searches for a study spot and finds fewer than two options, log an unmet request
+const UNMET_BASE=[2,6,14,22,30,41,38,26,18,12,6,3];
+const UNMET_MODES={solo:.35,group:.25,present:.40};
+const UNMET_EVENTS=[];
+function studyCount(){const h=hNow(),need=studyMode==='present'?['شاشة']:[],minCap=studyMode==='group'?4:1;
+  return ROOMS.filter(r=>r.cap>=minCap&&need.every(f=>r.feat.includes(f))&&!busyAt(r.id,day,h)&&freeUntil(r.id,day,h)-h>=.5).length}
+function logStudySearch(){
+  if(studyCount()>=2)return;
+  UNMET_EVENTS.push({day,h:Math.floor(hNow()),mode:studyMode});
+  if(LIVE_READY&&uniId)sb('unmet',{method:'POST',body:JSON.stringify({uni:uniId,mode:studyMode,hour:Math.floor(hNow())})}).catch(()=>{});
+}
+function unmetHtml(){
+  const by=UNMET_BASE.slice();UNMET_EVENTS.forEach(e=>{const i=e.h-7;if(i>=0&&i<12)by[i]++});
+  const total=by.reduce((a,b)=>a+b,0),mx=Math.max(...by),peak=by.indexOf(mx)+7;
+  const modes={solo:0,group:0,present:0};Object.keys(modes).forEach(k=>modes[k]=Math.round(UNMET_BASE.reduce((a,b)=>a+b,0)*UNMET_MODES[k]));
+  UNMET_EVENTS.forEach(e=>modes[e.mode]++);
+  const pct=k=>Math.round(modes[k]/total*100);
+  return`<div class="card"><h4>طلب ما انلبى — طلاب دوّروا مكان مذاكرة وما لقوا</h4>
+    <div class="un-top"><div><b>${total}</b><small>مرة هالأسبوع</small></div><div><b>${fmtH(peak)}</b><small>أكثر وقت</small></div><div><b>${pct('present')}٪</b><small>كانوا يبون يحضّرون عرض</small></div></div>
+    <div class="un-bars">${by.map((v,i)=>`<div><i style="height:${Math.max(4,v/mx*100)}%;${i+7===peak?'background:var(--high)':''}"></i><span>${(i+7)>12?i-5:i+7}</span></div>`).join('')}</div>
+    <p class="un-n">مذاكرة فردية ${pct('solo')}٪ · جماعية ${pct('group')}٪ · تحضير عرض ${pct('present')}٪. هالرقم ما تملكه أي جامعة اليوم، وهو اللي يحدد وش تحوّلون أول.</p></div>`;
+}
+
+// ---- Venue zone: judges' stage screen and join link ----
+function joinUrl(){return location.origin+location.pathname+'?join='+(uniId||'yu')}
+function openStage(){
+  closeSheet();const st=document.getElementById('stage');st.hidden=false;renderStage();
+  const box=document.getElementById('qr');box.innerHTML='';
+  const draw=()=>{try{new QRCode(box,{text:joinUrl(),width:220,height:220,colorDark:'#13233A',colorLight:'#ffffff'})}catch(e){box.textContent=joinUrl()}};
+  if(window.QRCode)draw();else{const sc=document.createElement('script');sc.src='https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';sc.onload=draw;sc.onerror=()=>{box.textContent=joinUrl()};document.head.appendChild(sc)}
+}
+function renderStage(){const st=document.getElementById('stage');if(!st||st.hidden)return;
+  const z=byId.venue,n=isLive()?liveCount(z):people(z);
+  document.getElementById('stN').textContent=n;
+  document.getElementById('stL').textContent=isLive()?'جهاز داخل قاعة العرض الحين':'شخص في القاعة (محاكاة — اربطوا Supabase للعدّ الحقيقي)';
+  document.getElementById('stU').textContent=joinUrl();
+}
+document.addEventListener('click',e=>{if(e.target.closest('#openStage'))openStage();if(e.target.closest('#closeStage'))document.getElementById('stage').hidden=true});
+
+
+// ---- Apply role-specific navigation ----
+const ROLE_TABS={student:['map','study','pred','alerts'],faculty:['map','rooms','study','pred'],admin:['map','admin','rooms','pred']};
+function applyRole(){
+  const tabs=ROLE_TABS[role];
+  document.querySelectorAll('nav button').forEach(b=>{b.hidden=!tabs.includes(b.dataset.t)});
+  document.querySelector('nav').style.gridTemplateColumns=`repeat(${tabs.length},1fr)`;
+  document.querySelectorAll('nav button').forEach(b=>b.setAttribute('aria-selected',b.dataset.t==='map'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.id==='tab-map'));
+  loadRS();const uu=document.getElementById('underused');if(uu)uu.innerHTML='';if(role!=='student'&&byId[predId].kind==='parking')predId='lib';
+}
+document.querySelectorAll('.role').forEach(b=>b.onclick=()=>{role=b.dataset.role;document.querySelectorAll('.role').forEach(x=>x.setAttribute('aria-pressed',x===b))});
+
+/* ---------- misc ---------- */
+let tt;function toast(m){const t=document.getElementById('toast');t.querySelector('span').textContent=m;t.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),3200)}
+function renderAll(){document.getElementById('clock').textContent=fmt(T);document.getElementById('day').textContent=DAY_NAMES[day]+(timeMode==='sim'?' · محاكاة':'');document.getElementById('ff').hidden=timeMode==='real';
+  renderMap();renderSheet();renderPred();renderAdmin();renderAlerts();checkAlerts();renderGps();renderStudy();renderRooms();renderStage();
+  const uu=document.getElementById('underused');if(uu&&uniId&&!uu.innerHTML)renderUnderused();
+  const pn=document.getElementById('partN');if(pn&&!isLive())pn.textContent=(4700+Math.round(Math.sin(T/40)*150+Math.random()*40)).toLocaleString('en')}
+function advance(min){if(timeMode==='real'){syncRealTime();Z.forEach(z=>noise[z.id]=Math.max(-6,Math.min(6,noise[z.id]+(Math.random()-.5)*3)));renderAll();return}
+  for(let i=0;i<min/5;i++){T+=5;Z.forEach(z=>noise[z.id]=Math.max(-6,Math.min(6,noise[z.id]+(Math.random()-.5)*3)));
+  if(T>18*60){T=7*60;day=(day+1)%5}}renderAll()}
+
+document.addEventListener('click',e=>{
+  const a=e.target.closest('[data-alert]');if(a){addAlert(a.dataset.alert);return}
+  const o=e.target.closest('[data-open]');if(o){openSheet(o.dataset.open);return}
+  const r=e.target.closest('[data-rep]');if(r){toast('شكراً! تحديثك وصل ويساعد غيرك');return}
+  const c=e.target.closest('#tab-map .chip');if(c){filter=c.dataset.f;document.querySelectorAll('#tab-map .chip').forEach(x=>x.setAttribute('aria-pressed',x===c));renderMap();return}
+  const n=e.target.closest('nav button');if(n){document.querySelectorAll('nav button').forEach(x=>x.setAttribute('aria-selected',x===n));
+    document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.id==='tab-'+n.dataset.t));
+    if(n.dataset.t==='alerts'){unseen=0;checkAlerts()}if(n.dataset.t==='study')logStudySearch();if(n.dataset.t==='admin')renderUnderused();closeSheet();document.querySelector('main').scrollTop=0}
+});
+document.getElementById('scrim').onclick=closeSheet;
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeSheet()});
+document.getElementById('ff').onclick=()=>advance(30);
+syncRealTime();renderAll();setInterval(()=>advance(5),3000);
+// Direct join from the QR code: skip onboarding and start real GPS
+(function(){const j=new URLSearchParams(location.search).get('join');if(!j||!UNIS[j])return;
+  uniId=j;user=UNIS[j].name;role='student';
+  document.getElementById('onb').classList.add('hide');applyRole();openMap();
+  setTimeout(()=>{realGps=true;if(meMarker)meMarker.dragging.disable();startGps();renderAll();toast('أهلاً! اسمح بالموقع وبينحسب وجودك في القاعة')},600);
+})();
+
+</script>
+</body>
+</html>

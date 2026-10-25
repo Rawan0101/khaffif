@@ -1,0 +1,26 @@
+{
+  "expo": {
+    "name": "خفّف",
+    "slug": "khaffif",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#EEF2F1",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.khaffif.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "خفّف يستخدم موقعك داخل الحرم الجامعي فقط لحساب الزحمة بشكل مجهول الهوية.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "خفّف يستخدم موقعك داخل الحرم الجامعي فقط لحساب الزحمة بشكل مجهول الهوية."
+      }
+    },
+    "android": {
+      "package": "com.khaffif.app",
+      "permissions": ["ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION"]
+    },
+    "plugins": [
+      ["expo-location", { "locationWhenInUsePermission": "خفّف يستخدم موقعك داخل الحرم الجامعي فقط لحساب الزحمة بشكل مجهول الهوية." }],
+      "expo-notifications"
+    ]
+  }
+}
